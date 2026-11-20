@@ -1,0 +1,21 @@
+{
+  "name": "sre-zero-core",
+  "version": "1.0.0",
+  "description": "Autonomous Cloud Incident & Root Cause Investigator powered by Google Gemini 4 Hydrogen",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "sre",
+    "devops",
+    "gemini-4-hydrogen",
+    "google-ai-studio",
+    "incident-investigation",
+    "autonomous-agents"
+  ],
+  "author": "A-Team (Keshav Jadam)",
+  "license": "MIT"
+}
