@@ -313,9 +313,13 @@ Respond ONLY with valid JSON strictly conforming to this schema:
   }
 
   // Serve Static Frontend Assets (HTML, JS, CSS, Media)
-  const publicDir = path.join(__dirname, 'public');
-  let requestedPath = url.pathname === '/' ? 'index.html' : url.pathname;
-  let filePath = path.join(publicDir, requestedPath);
+  const cleanPath = url.pathname === '/' ? 'index.html' : url.pathname.replace(/^\/+/, '');
+  let filePath = path.join(__dirname, 'public', cleanPath);
+
+  // If not found in public/, check root directory
+  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    filePath = path.join(__dirname, cleanPath);
+  }
 
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     const ext = path.extname(filePath).toLowerCase();
@@ -335,11 +339,16 @@ Respond ONLY with valid JSON strictly conforming to this schema:
   }
 
   // SPA fallback for client routing
-  const fallbackIndex = path.join(publicDir, 'index.html');
-  if (fs.existsSync(fallbackIndex)) {
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    fs.createReadStream(fallbackIndex).pipe(res);
-    return;
+  const fallbackCandidates = [
+    path.join(__dirname, 'public', 'index.html'),
+    path.join(__dirname, 'index.html')
+  ];
+  for (const fallback of fallbackCandidates) {
+    if (fs.existsSync(fallback)) {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      fs.createReadStream(fallback).pipe(res);
+      return;
+    }
   }
 
   // 404 Route
