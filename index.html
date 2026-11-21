@@ -447,6 +447,8 @@
       // ─── ENTERPRISE HYBRID SECURITY ARCHITECTURE STATE ───
       const [securityMode, setSecurityMode] = useState('HYBRID'); // 'HYBRID' | 'RESTRICTED'
       const [showApprovalModal, setShowApprovalModal] = useState(false);
+      const [showRollbackModal, setShowRollbackModal] = useState(false);
+      const [isDeployingRollback, setIsDeployingRollback] = useState(false);
       const [previewData, setPreviewData] = useState(null);
       const [isApproving, setIsApproving] = useState(false);
       const [securityNotice, setSecurityNotice] = useState(null);
@@ -736,64 +738,102 @@
         }
       };
 
-      // ─── 9. APPLY & ROLLBACK ALL (LOCKS TIMER, ZEROS ALL ERRORS) ───
-      const handleApplyAndRollback = async () => {
-        setCurrentStep(5);
+      // ─── 9. APPLY & ROLLBACK ALL (SAFETY GATE & REALISTIC ROLLING RECOVERY) ───
+      const handleApplyAndRollback = () => {
         if (userRole.includes('Viewer')) {
-          alert('🚫 Access Denied: Viewer role cannot approve recovery actions. Switch to Approver in top-right.');
+          alert('🚫 Access Denied: Viewer role cannot approve recovery actions. Switch to Approver/Commander in top-right.');
           return;
         }
+        setShowRollbackModal(true);
+      };
 
-        setIsRunning(false);
-        const durationFormatted = formatSecondsPadded(elapsedSeconds);
-        setRecordedDuration(durationFormatted);
-        setTestApproved(true);
+      const confirmAndExecuteRollback = async () => {
+        setShowRollbackModal(false);
+        setIsDeployingRollback(true);
+        setIncidentState('RECOVERING');
+        setCurrentStep(4);
 
-        setIncidentErrors(prev => prev.map(err => ({ ...err, resolved: true })));
+        // Ensure timer is ticking realistically
+        const startSec = elapsedSeconds > 0 ? elapsedSeconds : 34;
+        setElapsedSeconds(startSec);
+        setIsRunning(true);
+        setSecurityNotice('🔄 ROLLING RECOVERY IN PROGRESS: Reverting commit a89f31c across 5 microservice pods...');
 
-        setIncidentState('RESOLVED');
-        setErrorRate(0.02);
-        setAvailability('99.98%');
-        setP95Latency(180);
-        setCpuUsage(32.1);
-        setMemoryUsage(41.5);
+        // Stage 1: Pods 1 & 2 healthy (800ms)
+        setTimeout(() => {
+          setElapsedSeconds(prev => prev + 1);
+          setErrorRate(54.2);
+          setP95Latency(780);
+          setIncidentErrors(prev => prev.map((e, idx) => idx < 2 ? { ...e, resolved: true } : e));
+          setSecurityNotice('🔄 Pods 1 & 2 healthy. Verifying canary traffic...');
+        }, 800);
 
-        if (window.gsap) {
-          gsap.fromTo("#kpi-faults-box", 
-            { scale: 1.05 }, 
-            { scale: 1, duration: 0.4, ease: "power2.out" }
-          );
-        }
+        // Stage 2: Pods 3 & 4 healthy (1600ms)
+        setTimeout(() => {
+          setElapsedSeconds(prev => prev + 2);
+          setErrorRate(18.5);
+          setP95Latency(340);
+          setIncidentErrors(prev => prev.map((e, idx) => idx < 4 ? { ...e, resolved: true } : e));
+          setSecurityNotice('🔄 Pods 3 & 4 healthy. Draining connections from faulty revision...');
+        }, 1600);
 
-        setAuditLedger(prev => [
-          {
-            id: prev.length + 1,
-            time: new Date().toISOString().substring(11, 19) + ' UTC',
-            actor: 'SRE-Commander (Keshav Jadam)',
-            role: userRole,
-            action: 'PRODUCTION_ROLLBACK_AUTHORIZED',
-            reason: typedJustification || 'Full autonomous hotfix deployment',
-            ref: 'PR #105 (git revert a89f31c)'
-          },
-          ...prev
-        ]);
+        // Stage 3: All 5 Pods healthy (2400ms) - Final Lock
+        setTimeout(async () => {
+          setIsRunning(false);
+          const finalSec = startSec + 4;
+          setElapsedSeconds(finalSec);
+          const durationFormatted = formatSecondsPadded(finalSec);
+          setRecordedDuration(durationFormatted);
+          setTestApproved(true);
+          setIsDeployingRollback(false);
+          setCurrentStep(5);
 
-        try {
-          await fetch('/api/rollback', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prNumber: 104,
-              commitSha: 'a89f31c',
-              approver: 'Keshav Jadam',
+          setIncidentErrors(prev => prev.map(err => ({ ...err, resolved: true })));
+          setIncidentState('RESOLVED');
+          setErrorRate(0.02);
+          setAvailability('99.98%');
+          setP95Latency(180);
+          setCpuUsage(32.1);
+          setMemoryUsage(41.5);
+          setSecurityNotice('✅ PRODUCTION RECOVERED: 5/5 microservices restored. SLA 99.98% locked at ' + durationFormatted + '.');
+
+          if (window.gsap) {
+            gsap.fromTo("#kpi-faults-box", 
+              { scale: 1.05 }, 
+              { scale: 1, duration: 0.4, ease: "power2.out" }
+            );
+          }
+
+          setAuditLedger(prev => [
+            {
+              id: prev.length + 1,
+              time: new Date().toISOString().substring(11, 19) + ' UTC',
+              actor: 'SRE-Commander (Keshav Jadam)',
               role: userRole,
-              justification: typedJustification || 'Automated multi-fault hotfix rollback authorized by Incident Commander',
-              safetyGatesConfirmed: true,
-              recordedSeconds: elapsedSeconds
-            })
-          });
-          fetchSecurityState();
-        } catch (err) {}
+              action: 'PRODUCTION_ROLLBACK_AUTHORIZED',
+              reason: typedJustification || 'Emergency 5-fault hotfix rollback authorized by Incident Commander',
+              ref: 'PR #105 (git revert a89f31c)'
+            },
+            ...prev
+          ]);
+
+          try {
+            await fetch('/api/rollback', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                prNumber: 104,
+                commitSha: 'a89f31c',
+                approver: 'Keshav Jadam',
+                role: userRole,
+                justification: typedJustification || 'Automated multi-fault hotfix rollback authorized by Incident Commander',
+                safetyGatesConfirmed: true,
+                recordedSeconds: finalSec
+              })
+            });
+            fetchSecurityState();
+          } catch (err) {}
+        }, 2400);
       };
 
       // ─── 10. FULL SIMULATOR RESET ───
@@ -1740,10 +1780,17 @@
 
                   <button
                     onClick={handleApplyAndRollback}
-                    disabled={unresolvedFaultCount === 0}
-                    className="acid-btn-primary px-4 py-2 text-xs uppercase"
+                    disabled={unresolvedFaultCount === 0 || isDeployingRollback}
+                    className="acid-btn-primary px-4 py-2 text-xs uppercase flex items-center gap-1.5"
                   >
-                    ⚡ Resolve & Rollback All Faults at Once
+                    {isDeployingRollback ? (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-black animate-ping"></span>
+                        <span>Deploying Rolling Revert...</span>
+                      </>
+                    ) : (
+                      <span>⚡ Resolve & Rollback All Faults at Once</span>
+                    )}
                   </button>
                 </div>
 
@@ -2399,6 +2446,88 @@ receivers:
                       className="w-full sm:w-auto acid-btn-primary px-5 py-2.5 rounded-lg flex items-center justify-center gap-2"
                     >
                       <span>{isApproving ? 'Verifying...' : '✅ Approve & Transmit Sanitized Data'}</span>
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* ─── PRODUCTION RECOVERY SAFETY GATE: ROLLBACK AUTHORIZATION MODAL ─── */}
+            {showRollbackModal && (
+              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="acid-box bg-[#131518] border border-[#A3E635] max-w-xl w-full p-6 space-y-4 shadow-[0_0_40px_rgba(163,230,53,0.25)] animate-in fade-in zoom-in-95 font-mono">
+                  
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#FB7185] animate-ping"></span>
+                      <h3 className="text-base font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <span>🛡️</span>
+                        <span>Production Recovery Safety Gate</span>
+                      </h3>
+                    </div>
+                    <button 
+                      onClick={() => setShowRollbackModal(false)}
+                      className="text-zinc-400 hover:text-white text-sm"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Target Scope */}
+                  <div className="bg-[#181C21] p-3.5 rounded-lg border border-white/10 space-y-2 text-xs">
+                    <div className="text-zinc-400">TARGET RECOVERY ACTION:</div>
+                    <div className="text-white font-bold text-sm text-[#A3E635]">
+                      1-Click Git Revert PR #105 (Rollback commit a89f31c)
+                    </div>
+                    <div className="text-zinc-400 pt-1">AFFECTED MULTI-MICROSERVICE SCOPE:</div>
+                    <div className="text-zinc-300">
+                      5 Microservices: payment-svc, auth-svc, cart-svc, order-svc, notification-svc
+                    </div>
+                  </div>
+
+                  {/* Safety Checks */}
+                  <div className="space-y-1.5 text-[11px] text-zinc-400">
+                    <div className="text-zinc-300 font-bold">AUTOMATED SAFETY PRE-FLIGHT VERIFICATIONS:</div>
+                    <div className="flex items-center gap-2 text-[#A3E635]">
+                      <span>✓</span> <span>Schema Verification: No destructive DDL or dropped tables</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#A3E635]">
+                      <span>✓</span> <span>Canary Readiness: Cluster asia-south1-gke-01 ready</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#A3E635]">
+                      <span>✓</span> <span>Unit Regression Suite: 100% passing across services</span>
+                    </div>
+                  </div>
+
+                  {/* Justification input */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-zinc-400 block font-bold">COMMANDER JUSTIFICATION (SOC2 AUDIT):</label>
+                    <input
+                      type="text"
+                      value={typedJustification}
+                      onChange={(e) => setTypedJustification(e.target.value)}
+                      placeholder="e.g. Authorized emergency 5-fault hotfix rollback"
+                      className="w-full bg-black/80 border border-white/20 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-[#A3E635]"
+                    />
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-2 flex items-center justify-end gap-3 text-xs font-bold">
+                    <button
+                      onClick={() => setShowRollbackModal(false)}
+                      className="px-4 py-2 rounded-lg border border-white/20 text-zinc-300 hover:bg-white/10"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmAndExecuteRollback}
+                      disabled={isDeployingRollback}
+                      className="acid-btn-primary px-5 py-2.5 rounded-lg flex items-center gap-2"
+                    >
+                      <span>🚀</span>
+                      <span>{isDeployingRollback ? 'Deploying Rolling Update...' : 'Authorize & Execute Rollback'}</span>
                     </button>
                   </div>
 
