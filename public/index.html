@@ -552,14 +552,20 @@
                 approvalToken: previewData.approvalToken,
                 approved: false,
                 approverName: 'Keshav Jadam',
-                justification: 'Rejected by Commander: Use local heuristics only'
+                justification: 'Explicitly rejected by Commander: Swarm halted'
               })
             });
           } catch (err) {}
         }
         setShowApprovalModal(false);
-        setSecurityNotice('🛡️ DATA-SHARING REJECTED: Evidence was NOT sent to Gemini. Swarm executed with local AST parser.');
-        handleRunSwarm(null);
+        setSecurityNotice('🛑 INVESTIGATION HALTED: Commander explicitly rejected AI data-sharing. Zero evidence was sent to Gemini. Process stopped.');
+        setSwarmStatus('REJECTED');
+        setSwarmProgress(0);
+        setAgentWorkers(prev => prev.map(w => ({ ...w, status: 'BLOCKED', activeDetail: 'Execution blocked by Commander policy.' })));
+        setSwarmLogs(prev => [
+          { time: new Date().toISOString().substring(11, 23), agent: 'SecurityGateGuard', msg: '🛑 [REJECTED BY COMMANDER] AI data sharing rejected. External AI blocked. Swarm execution HALTED.' },
+          ...prev
+        ]);
         fetchSecurityState();
       };
 
@@ -2382,9 +2388,10 @@ receivers:
                   <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3 font-mono text-xs font-bold">
                     <button
                       onClick={handleRejectDataSharing}
-                      className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-[#FB7185]/40 text-[#FB7185] hover:bg-[#FB7185]/10 transition"
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-[#FB7185]/40 text-[#FB7185] hover:bg-[#FB7185]/10 transition flex items-center justify-center gap-1.5"
                     >
-                      🔒 Reject (Use Local Heuristics Only)
+                      <span>🛑</span>
+                      <span>Reject & Halt Investigation</span>
                     </button>
                     <button
                       onClick={handleApproveDataSharing}
