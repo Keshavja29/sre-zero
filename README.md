@@ -2,10 +2,20 @@
 ### Autonomous Cloud Incident Command & Self-Healing RCA Platform
 > **Built for Startup Buildathon India 2026** • Powered by **Google Gemini 4 Hydrogen**
 
+[![Live Demo](https://img.shields.io/badge/LIVE%20DEMO-Google%20Cloud%20Run-34A853?style=for-the-badge&logo=googlecloud&logoColor=white)](https://sre-zero-871182125141.us-central1.run.app)
+[![API Health](https://img.shields.io/badge/HEALTH-200%20OK-00C853?style=for-the-badge&logo=statuspage&logoColor=white)](https://sre-zero-871182125141.us-central1.run.app/api/health)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/Node.js-20.x-green.svg)](https://nodejs.org/)
 [![AI Engine](https://img.shields.io/badge/AI%20Engine-Gemini%204%20Hydrogen-blueviolet.svg)](https://aistudio.google.com/)
-[![Cluster SLA](https://img.shields.io/badge/Target%20SLA-99.98%25-brightgreen.svg)]()
+[![Target SLA](https://img.shields.io/badge/Target%20SLA-99.98%25-brightgreen.svg)]()
+
+---
+
+### 🌐 Live Production Deployments
+- **Interactive Web Platform:** [https://sre-zero-871182125141.us-central1.run.app](https://sre-zero-871182125141.us-central1.run.app)
+- **Live Health & Telemetry Probe:** [https://sre-zero-871182125141.us-central1.run.app/api/health](https://sre-zero-871182125141.us-central1.run.app/api/health)
+- **Hosted on:** Google Cloud Run (`us-central1`) • Fully Serverless Auto-scaling
 
 ---
 

@@ -1,0 +1,2422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRE-Zero | Autonomous Cloud Incident Command & RCA</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23CCFF00'><rect width='24' height='24' rx='4' fill='%23050505'/><text x='12' y='17' font-size='13' font-weight='900' text-anchor='middle' fill='%23CCFF00'>S0</text></svg>">
+  
+  <!-- Google Fonts: Space Grotesk for High-Tech Punk & JetBrains Mono for Code -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Space Grotesk"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          },
+          colors: {
+            acid: {
+              black: '#0B0C0E',
+              card: '#131518',
+              cardHover: '#1C2127',
+              panel: '#16191D',
+              lime: '#A3E635',
+              limeDark: '#84CC16',
+              red: '#FB7185',
+              cyan: '#38BDF8',
+              purple: '#A78BFA',
+              border: 'rgba(255, 255, 255, 0.12)',
+              borderActive: 'rgba(163, 230, 53, 0.6)'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18, ReactDOM 18, Babel for JSX -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- GSAP Animation Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <style>
+    /* ─── ACID MINIMALIST / HIGH-TECH PUNK SIGNATURE SYSTEM ─── */
+    body {
+      background-color: #0B0C0E;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 32px 32px;
+      color: #F4F4F5;
+      font-family: 'Space Grotesk', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Razor-sharp technical cards */
+    .acid-box {
+      background: #131518;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .acid-box:hover {
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+
+    .acid-box-highlight {
+      background: #111111;
+      border: 1px solid #A3E635;
+      box-shadow: 0 0 12px rgba(163, 230, 53, 0.1);
+      border-radius: 12px;
+    }
+
+    .acid-box-red {
+      background: #1A1215;
+      border: 1px solid #FB7185;
+      box-shadow: 0 0 20px rgba(251, 113, 133, 0.15);
+      border-radius: 12px;
+    }
+
+    /* Technical Action Buttons */
+    .acid-btn-primary {
+      background: #A3E635;
+      color: #000000;
+      font-weight: 800;
+      font-family: 'Space Grotesk', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 8px;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 0 10px rgba(163, 230, 53, 0.25);
+    }
+    .acid-btn-primary:hover:not(:disabled) {
+      background: #FFFFFF;
+      color: #000000;
+      box-shadow: 0 0 16px rgba(163, 230, 53, 0.25);
+      transform: translateY(-1px);
+    }
+    .acid-btn-primary:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .acid-btn-secondary {
+      background: #1C2127;
+      color: #F4F4F5;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-weight: 700;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+    }
+    .acid-btn-secondary:hover:not(:disabled) {
+      border-color: #A3E635;
+      color: #A3E635;
+      background: #1C1C1C;
+    }
+
+    .acid-btn-danger {
+      background: #FB7185;
+      color: #FFFFFF;
+      font-weight: 800;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      box-shadow: 0 0 12px rgba(251, 113, 133, 0.3);
+    }
+    .acid-btn-danger:hover:not(:disabled) {
+      background: #F43F5E;
+      box-shadow: 0 0 14px rgba(251, 113, 133, 0.25);
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0B0C0E;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27272A;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #A3E635;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-zinc-100 font-sans selection:bg-[#A3E635] selection:text-black">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    // ─── SVG TECHNICAL ICONS ───
+    const Icons = {
+      Activity: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      GitBranch: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <line x1="6" y1="3" x2="6" y2="15" strokeWidth="2.2" strokeLinecap="round"/>
+          <circle cx="18" cy="6" r="3" strokeWidth="2.2"/>
+          <circle cx="6" cy="18" r="3" strokeWidth="2.2"/>
+          <path d="M18 9a9 9 0 0 1-9 9" strokeWidth="2.2" strokeLinecap="round"/>
+        </svg>
+      ),
+      ShieldAlert: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+          <line x1="12" y1="8" x2="12" y2="12" strokeWidth="2.2" strokeLinecap="round"/>
+          <line x1="12" y1="16" x2="12.01" y2="16" strokeWidth="2.5" strokeLinecap="round"/>
+        </svg>
+      ),
+      Sparkles: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      Terminal: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <polyline points="4 17 10 11 4 5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+          <line x1="12" y1="19" x2="20" y2="19" strokeWidth="2.2" strokeLinecap="round"/>
+        </svg>
+      ),
+      ShieldCheck: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+          <polyline points="9 12 11 14 15 10" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      Cable: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M4 9a2 2 0 0 1-2-2V5h4a2 2 0 0 1 2 2v2" strokeWidth="2"/>
+          <path d="M8 7v6a4 4 0 0 0 4 4h4" strokeWidth="2"/>
+          <path d="M20 15v4a2 2 0 0 1-2 2h-4v-2" strokeWidth="2"/>
+        </svg>
+      ),
+      FileText: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeWidth="2" strokeLinecap="round"/>
+          <polyline points="14 2 14 8 20 8" strokeWidth="2"/>
+          <line x1="16" y1="13" x2="8" y2="13" strokeWidth="2"/>
+          <line x1="16" y1="17" x2="8" y2="17" strokeWidth="2"/>
+          <polyline points="10 9 9 9 8 9" strokeWidth="2"/>
+        </svg>
+      ),
+      Zap: () => (
+        <svg className="w-4 h-4 inline-block" fill="currentColor" viewBox="0 0 24 24">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      ),
+      RotateCcw: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <polyline points="1 4 1 10 7 10" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" strokeWidth="2.2" strokeLinecap="round"/>
+        </svg>
+      ),
+      Check: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <polyline points="20 6 9 17 4 12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )
+    };
+
+    // ─── 5 DISTINCT REAL MICROSERVICE BUGS DATABASE ───
+    const INITIAL_ERRORS = [
+      {
+        id: 'err-1',
+        service: 'payment-service',
+        file: 'services/payment/checkout_handler.py',
+        line: 142,
+        title: "KeyError: 'currency_code'",
+        category: 'HTTP 500 Outage',
+        severity: 'P0 Critical',
+        cause: "Frontend v2.1 client payload omitted 'currency_code'. Direct dict access threw unhandled KeyError.",
+        badLine: "currency = payload['currency_code']",
+        goodLine: "currency = payload.get('currency_code', 'INR')",
+        beforeCode: `140  def process_payment(order_id, payload):
+141      amount = payload.get('amount', 0)
+142 -    currency = payload['currency_code']   # ❌ CRASH: KeyError on legacy client
+143      return gateway.charge(amount=amount, currency=currency)`,
+        afterCode: `140  def process_payment(order_id, payload):
+141      amount = payload.get('amount', 0)
+142 +    currency = payload.get('currency_code', 'INR')  # ✅ RESOLVED: Safe fallback default
+143      return gateway.charge(amount=amount, currency=currency)`,
+        resolved: false
+      },
+      {
+        id: 'err-2',
+        service: 'auth-service',
+        file: 'services/auth/jwt_validator.py',
+        line: 88,
+        title: "AttributeError: 'NoneType' has no attribute 'split'",
+        category: 'HTTP 401/500 Crash',
+        severity: 'P0 Critical',
+        cause: "Client requested API without Authorization header. Direct string split threw NoneType exception.",
+        badLine: "token = auth_header.split(' ')[1]",
+        goodLine: "token = auth_header.split(' ')[1] if (auth_header and ' ' in auth_header) else ''",
+        beforeCode: `86  def extract_bearer_token(request_headers):
+87      auth_header = request_headers.get('Authorization')
+88 -    token = auth_header.split(" ")[1]   # ❌ CRASH: AttributeError if header missing
+89      return jwt.decode(token, SECRET_KEY, algorithms=["HS256"])`,
+        afterCode: `86  def extract_bearer_token(request_headers):
+87      auth_header = request_headers.get('Authorization')
+88 +    token = auth_header.split(" ")[1] if (auth_header and " " in auth_header) else ""  # ✅ RESOLVED
+89      return jwt.decode(token, SECRET_KEY, algorithms=["HS256"]) if token else None`,
+        resolved: false
+      },
+      {
+        id: 'err-3',
+        service: 'cart-service',
+        file: 'services/cart/redis_session.py',
+        line: 64,
+        title: "ConnectionResetError: Connection pool exhausted",
+        category: 'High Latency Spike',
+        severity: 'P1 High',
+        cause: "Redis pool max_connections capped at 10. Heavy traffic spike caused 1,420ms connection backlog.",
+        badLine: "pool = ConnectionPool(host='redis-cluster', max_connections=10)",
+        goodLine: "pool = ConnectionPool(host='redis-cluster', max_connections=250, socket_timeout=2.0)",
+        beforeCode: `62  def get_redis_client():
+63      # Legacy pool setting insufficient for 120k lines/s
+64 -    pool = ConnectionPool(host='redis-cluster', max_connections=10)   # ❌ BOTTLENECK
+65      return redis.Redis(connection_pool=pool)`,
+        afterCode: `62  def get_redis_client():
+63      # Upgraded pool with non-blocking socket timeout
+64 +    pool = ConnectionPool(host='redis-cluster', max_connections=250, socket_timeout=2.0) # ✅ RESOLVED
+65      return redis.Redis(connection_pool=pool)`,
+        resolved: false
+      },
+      {
+        id: 'err-4',
+        service: 'order-service',
+        file: 'services/orders/database_pool.py',
+        line: 115,
+        title: "ZeroDivisionError: division by zero",
+        category: 'Data Calculation Bug',
+        severity: 'P1 High',
+        cause: "Order count was 0 for empty test carts, resulting in unhandled division by zero.",
+        badLine: "discount_rate = total_discount / order_count",
+        goodLine: "discount_rate = (total_discount / order_count) if order_count > 0 else 0.0",
+        beforeCode: `113  def calculate_average_discount(total_discount, order_count):
+114      # Calculation assumes order_count is always > 0
+115 -    discount_rate = total_discount / order_count   # ❌ CRASH: ZeroDivisionError
+116      return round(discount_rate, 2)`,
+        afterCode: `113  def calculate_average_discount(total_discount, order_count):
+114      # Guard check prevents crash on empty checkout state
+115 +    discount_rate = (total_discount / order_count) if order_count > 0 else 0.0 # ✅ RESOLVED
+116      return round(discount_rate, 2)`,
+        resolved: false
+      },
+      {
+        id: 'err-5',
+        service: 'notification-service',
+        file: 'services/notification/webhook_dispatcher.py',
+        line: 53,
+        title: "TimeoutError: Synchronous 30s Gateway Timeout",
+        category: 'Ingress Block',
+        severity: 'P2 Medium',
+        cause: "Synchronous webhook call blocked the main event loop for 30 seconds when partner endpoint lagged.",
+        badLine: "resp = requests.post(webhook_url, json=event_data, timeout=30.0)",
+        goodLine: "task = async_webhook_queue.delay(webhook_url, event_data, timeout=3.0)",
+        beforeCode: `51  def dispatch_partner_webhook(webhook_url, event_data):
+52      # Blocking synchronous call locks GKE thread
+53 -    resp = requests.post(webhook_url, json=event_data, timeout=30.0) # ❌ THREAD LOCK
+54      return resp.status_code`,
+        afterCode: `51  def dispatch_partner_webhook(webhook_url, event_data):
+52      # Dispatched asynchronously to background Celery queue
+53 +    task = async_webhook_queue.delay(webhook_url, event_data, timeout=3.0) # ✅ RESOLVED
+54      return 202`,
+        resolved: false
+      }
+    ];
+
+    function App() {
+      // ─── 1. CORE TIMER & STOPWATCH (STARTS AT 000 SEC) ───
+      const [isRunning, setIsRunning] = useState(false);
+      const [elapsedSeconds, setElapsedSeconds] = useState(0);
+      const [hasBenchmarkStarted, setHasBenchmarkStarted] = useState(false);
+      const [testApproved, setTestApproved] = useState(false);
+      const [recordedDuration, setRecordedDuration] = useState(null);
+
+      const formatSecondsPadded = (sec) => {
+        return String(sec).padStart(3, '0') + ' SEC';
+      };
+
+      const timerRef = useRef(null);
+      useEffect(() => {
+        if (isRunning) {
+          timerRef.current = setInterval(() => {
+            setElapsedSeconds(prev => prev + 1);
+          }, 1000);
+        } else if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+        return () => {
+          if (timerRef.current) clearInterval(timerRef.current);
+        };
+      }, [isRunning]);
+
+      // ─── 2. MULTI-ERROR SYSTEM (5 REAL BUGS) ───
+      const [incidentErrors, setIncidentErrors] = useState(INITIAL_ERRORS);
+      const [selectedErrorId, setSelectedErrorId] = useState('err-1');
+
+      const unresolvedFaultCount = useMemo(() => {
+        return incidentErrors.filter(e => !e.resolved).length;
+      }, [incidentErrors]);
+
+      const selectedError = useMemo(() => {
+        return incidentErrors.find(e => e.id === selectedErrorId) || incidentErrors[0];
+      }, [incidentErrors, selectedErrorId]);
+
+      // ─── 3. ACTIVE VIEW NAVIGATION ───
+      const [activeView, setActiveView] = useState('overview'); 
+      const viewContainerRef = useRef(null);
+
+      // ─── STEPWISE INCIDENT RUNBOOK (5 GUIDED PHASES) ───
+      const [currentStep, setCurrentStep] = useState(1); // 1: Ingest, 2: Swarm, 3: Hotfix, 4: Safety, 5: Rollback
+
+      // ─── UNIVERSAL APP ONBOARDING & SDK INTEGRATION HUB ───
+      const [selectedSdkTab, setSelectedSdkTab] = useState('python'); // 'python', 'node', 'k8s', 'webhook'
+      const [apiKeyCopied, setApiKeyCopied] = useState(false);
+      const [testIngestStatus, setTestIngestStatus] = useState(null); // 'SENDING', 'SUCCESS', null
+      const [testIngestResult, setTestIngestResult] = useState(null);
+      const [testServiceName, setTestServiceName] = useState('billing-service');
+      const [testErrorType, setTestErrorType] = useState('KeyError: customer_id');
+
+      const handleCopyApiKey = () => {
+        navigator.clipboard.writeText('sre_live_sec_7f9a882e3b1c90');
+        setApiKeyCopied(true);
+        setTimeout(() => setApiKeyCopied(false), 2000);
+      };
+
+      const handleSendTestTelemetry = async () => {
+        setTestIngestStatus('SENDING');
+        try {
+          const res = await fetch('/api/v1/telemetry/ingest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              service: testServiceName,
+              error: testErrorType,
+              line: 42,
+              timestamp: new Date().toISOString()
+            })
+          });
+          const data = await res.json();
+          setTestIngestStatus('SUCCESS');
+          setTestIngestResult(data);
+          
+          // Also append to live logs
+          setSwarmLogs(prev => [
+            { time: new Date().toISOString().substring(11, 23), agent: 'IngestWebhook', msg: `[EXTERNAL APP INGESTED] Incoming packet from '${testServiceName}' (${testErrorType}) verified!` },
+            ...prev
+          ]);
+        } catch (e) {
+          setTestIngestStatus('SUCCESS');
+          setTestIngestResult({ status: 'SUCCESS', message: 'Simulated packet ingested (Local fallback mode)', fingerprint: 'ast_sig_local_98a' });
+        }
+      };
+
+      useEffect(() => {
+        if (viewContainerRef.current && window.gsap) {
+          gsap.fromTo(viewContainerRef.current, 
+            { opacity: 0, y: 12 }, 
+            { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }
+          );
+        }
+      }, [activeView]);
+
+      // ─── 4. USER ROLE (RBAC) ───
+      const [userRole, setUserRole] = useState('Approver (Incident Commander)');
+
+      // ─── ENTERPRISE HYBRID SECURITY ARCHITECTURE STATE ───
+      const [securityMode, setSecurityMode] = useState('HYBRID'); // 'HYBRID' | 'RESTRICTED'
+      const [showApprovalModal, setShowApprovalModal] = useState(false);
+      const [previewData, setPreviewData] = useState(null);
+      const [isApproving, setIsApproving] = useState(false);
+      const [securityNotice, setSecurityNotice] = useState(null);
+
+      const fetchSecurityState = async () => {
+        try {
+          const res = await fetch('/api/security/mode');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.mode) setSecurityMode(data.mode);
+          }
+        } catch (e) {}
+
+        try {
+          const auditRes = await fetch('/api/security/audit-ledger');
+          if (auditRes.ok) {
+            const auditData = await auditRes.json();
+            if (auditData.ledger && auditData.ledger.length > 0) {
+              setAuditLedger(auditData.ledger);
+            }
+          }
+        } catch (e) {}
+      };
+
+      useEffect(() => {
+        fetchSecurityState();
+      }, []);
+
+      const handleToggleSecurityMode = async (e) => {
+        const newMode = e.target.value;
+        setSecurityMode(newMode);
+        try {
+          await fetch('/api/security/mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mode: newMode,
+              actor: 'SRE-Commander (Keshav Jadam)',
+              role: userRole
+            })
+          });
+          fetchSecurityState();
+        } catch (err) {}
+      };
+
+      const triggerAiSwarmWithSecurityGate = async () => {
+        if (securityMode === 'RESTRICTED') {
+          setSecurityNotice('🔒 RESTRICTED MODE ACTIVE: External Gemini AI transmission blocked by enterprise policy. Running 100% on-premise AST heuristics.');
+          handleRunSwarm(null);
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/security/preview-payload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              logs: selectedError.stack,
+              gitDiff: selectedError.diff,
+              incidentId: 'INC-2026-0814'
+            })
+          });
+          const data = await res.json();
+          setPreviewData(data);
+          setShowApprovalModal(true);
+        } catch (err) {
+          handleRunSwarm(null);
+        }
+      };
+
+      const handleApproveDataSharing = async () => {
+        if (!previewData || !previewData.approvalToken) return;
+        setIsApproving(true);
+        try {
+          await fetch('/api/security/approve-payload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              approvalToken: previewData.approvalToken,
+              approved: true,
+              approverName: 'Keshav Jadam',
+              justification: 'Production P0 Outage Triage Authorization'
+            })
+          });
+          setShowApprovalModal(false);
+          setIsApproving(false);
+          handleRunSwarm(previewData.approvalToken);
+          fetchSecurityState();
+        } catch (err) {
+          setShowApprovalModal(false);
+          setIsApproving(false);
+          handleRunSwarm(null);
+        }
+      };
+
+      const handleRejectDataSharing = async () => {
+        if (previewData && previewData.approvalToken) {
+          try {
+            await fetch('/api/security/approve-payload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                approvalToken: previewData.approvalToken,
+                approved: false,
+                approverName: 'Keshav Jadam',
+                justification: 'Rejected by Commander: Use local heuristics only'
+              })
+            });
+          } catch (err) {}
+        }
+        setShowApprovalModal(false);
+        setSecurityNotice('🛡️ DATA-SHARING REJECTED: Evidence was NOT sent to Gemini. Swarm executed with local AST parser.');
+        handleRunSwarm(null);
+        fetchSecurityState();
+      };
+
+      // ─── 5. INCIDENT LIFECYCLE ───
+      const [incidentState, setIncidentState] = useState('INVESTIGATING');
+
+      // Telemetry Data
+      const [errorRate, setErrorRate] = useState(94.8);
+      const [availability, setAvailability] = useState('91.2%');
+      const [p95Latency, setP95Latency] = useState(1420);
+      const [cpuUsage, setCpuUsage] = useState(88.4);
+      const [memoryUsage, setMemoryUsage] = useState(74.2);
+
+      // Approver Justification
+      const [typedJustification, setTypedJustification] = useState('');
+
+      // ─── 6. INTERACTIVE MULTI-AGENT SWARM ───
+      const [swarmStatus, setSwarmStatus] = useState('COMPLETED');
+      const [swarmProgress, setSwarmProgress] = useState(100);
+      const [showSwarmConsole, setShowSwarmConsole] = useState(false);
+
+      const [agentWorkers, setAgentWorkers] = useState([
+        {
+          id: 'logTriage',
+          name: '[01] Log Triage Agent',
+          role: 'AST Stacktrace Correlation',
+          status: 'DONE',
+          duration: '0.8s',
+          activeDetail: 'Scanning 4,120 log lines across GKE payment pods...',
+          resultDetail: 'Isolated 5 distinct exceptions across payment, auth, cart, order & notification services.'
+        },
+        {
+          id: 'gitBlame',
+          name: '[02] Git Blame Agent',
+          role: 'Commit Graph & Diff Attribution',
+          status: 'DONE',
+          duration: '1.1s',
+          activeDetail: 'Correlating runtime crash with merge history...',
+          resultDetail: 'Attributed breaking commits to PR #104 by @johndoe (commit a89f31c) merged 12m ago.'
+        },
+        {
+          id: 'verifier',
+          name: '[03] Remediation Verifier',
+          role: 'DDL Safety & Rollback Guard',
+          status: 'DONE',
+          duration: '0.5s',
+          activeDetail: 'Checking PostgreSQL migration history for irreversibility...',
+          resultDetail: 'Verified schema safety: No DDL alter table executed. Safe revert PR #105 generated.'
+        }
+      ]);
+
+      const [swarmLogs, setSwarmLogs] = useState([
+        { time: '02:14:26.110', agent: 'SwarmCoordinator', msg: '⚡ Spawning 3 specialized SRE subagents...' },
+        { time: '02:14:26.420', agent: 'LogTriageAgent', msg: 'Parsed 4,120 logs. 5 separate microservice crash signatures found.' },
+        { time: '02:14:26.890', agent: 'GitBlameAgent', msg: 'Identified culprit commit a89f31c in PR #104 merged by @johndoe.' },
+        { time: '02:14:27.210', agent: 'RemediationVerifier', msg: 'DDL Safety Check: No destructive migrations detected. Safe revert permitted.' },
+        { time: '02:14:27.525', agent: 'SwarmCoordinator', msg: 'Consensus reached. Ready for Commander approval.' }
+      ]);
+
+      const handleRunSwarm = async (approvalToken = null) => {
+        setSwarmStatus('RUNNING');
+        setSwarmProgress(20);
+        setAgentWorkers(prev => prev.map(w => ({ ...w, status: 'RUNNING' })));
+
+        const now = () => new Date().toISOString().substring(11, 23);
+        const modeLabel = securityMode === 'RESTRICTED' 
+          ? '🔒 [RESTRICTED MODE: ZERO EXTERNAL AI]' 
+          : approvalToken 
+            ? '🛡️ [HYBRID PRIVACY: AES-SANITIZED & APPROVED]' 
+            : '⚡ [LOCAL HEURISTIC ENGINE]';
+
+        setSwarmLogs(prev => [
+          { time: now(), agent: 'SwarmCoordinator', msg: `${modeLabel} Multi-Agent Swarm activated by Commander.` },
+          ...prev
+        ]);
+
+        if (approvalToken) {
+          try {
+            fetch('/api/triage', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                approvalToken,
+                logs: selectedError.stack,
+                gitDiff: selectedError.diff
+              })
+            }).then(r => r.json()).then(triageRes => {
+              if (triageRes.data) {
+                setSwarmLogs(prev => [
+                  { time: now(), agent: 'GeminiSynthesizer', msg: `[GEMINI 4 HYDROGEN] Confidence ${triageRes.data.confidenceScore || 99.4}%: Root Cause verified -> ${triageRes.data.rootCauseSummary}` },
+                  ...prev
+                ]);
+              }
+            }).catch(() => {});
+          } catch (e) {}
+        }
+
+        setTimeout(() => {
+          setSwarmProgress(50);
+          setSwarmLogs(prev => [
+            { time: now(), agent: 'LogTriageAgent', msg: securityMode === 'RESTRICTED' ? 'Parsing local container AST stacktraces (No external transmission)...' : 'Correlating multi-pod stacktraces with AST...' },
+            ...prev
+          ]);
+        }, 700);
+
+        setTimeout(() => {
+          setSwarmProgress(80);
+          setSwarmLogs(prev => [
+            { time: now(), agent: 'GitBlameAgent', msg: 'Validating commit delta across 5 repositories...' },
+            ...prev
+          ]);
+        }, 1400);
+
+        setTimeout(() => {
+          setSwarmProgress(100);
+          setSwarmStatus('COMPLETED');
+          setAgentWorkers(prev => prev.map(w => ({ ...w, status: 'DONE' })));
+          setCurrentStep(3);
+          setSwarmLogs(prev => [
+            { time: now(), agent: 'SwarmCoordinator', msg: '✨ Consensus complete. Ready for 1-Click Rollback PR.' },
+            ...prev
+          ]);
+        }, 2000);
+      };
+
+      // ─── 7. INDIVIDUAL ERROR RESOLVER (ERRORS DISAPPEAR AS RESOLVED) ───
+      const handleResolveSingleError = (errId) => {
+        let isLastOne = false;
+        setIncidentErrors(prev => {
+          const next = prev.map(err => err.id === errId ? { ...err, resolved: true } : err);
+          const remaining = next.filter(e => !e.resolved).length;
+          
+          if (remaining === 0) {
+            isLastOne = true;
+          } else {
+            setErrorRate(Math.round((remaining / 5) * 94.8));
+            setP95Latency(Math.max(180, Math.round((remaining / 5) * 1420)));
+            const nextActive = next.find(e => !e.resolved);
+            if (nextActive) setSelectedErrorId(nextActive.id);
+          }
+          return next;
+        });
+
+        if (isLastOne) {
+          handleApplyAndRollback();
+        }
+      };
+
+      // ─── 8. START PERFORMANCE BENCHMARK ───
+      const handleStartPerformanceBenchmark = () => {
+        setCurrentStep(2);
+        setIsRunning(true);
+        setHasBenchmarkStarted(true);
+        setTestApproved(false);
+        setRecordedDuration(null);
+        setElapsedSeconds(0);
+        setIncidentState('INVESTIGATING');
+        setErrorRate(94.8);
+        setIncidentErrors(INITIAL_ERRORS);
+
+        triggerAiSwarmWithSecurityGate();
+
+        if (window.gsap) {
+          gsap.fromTo("#kpi-timer-display", 
+            { scale: 0.9, color: "#A3E635" }, 
+            { scale: 1, color: "#A3E635", duration: 0.35, ease: "power2.out" }
+          );
+        }
+      };
+
+      // ─── 9. APPLY & ROLLBACK ALL (LOCKS TIMER, ZEROS ALL ERRORS) ───
+      const handleApplyAndRollback = async () => {
+        setCurrentStep(5);
+        if (userRole.includes('Viewer')) {
+          alert('🚫 Access Denied: Viewer role cannot approve recovery actions. Switch to Approver in top-right.');
+          return;
+        }
+
+        setIsRunning(false);
+        const durationFormatted = formatSecondsPadded(elapsedSeconds);
+        setRecordedDuration(durationFormatted);
+        setTestApproved(true);
+
+        setIncidentErrors(prev => prev.map(err => ({ ...err, resolved: true })));
+
+        setIncidentState('RESOLVED');
+        setErrorRate(0.02);
+        setAvailability('99.98%');
+        setP95Latency(180);
+        setCpuUsage(32.1);
+        setMemoryUsage(41.5);
+
+        if (window.gsap) {
+          gsap.fromTo("#kpi-faults-box", 
+            { scale: 1.05 }, 
+            { scale: 1, duration: 0.4, ease: "power2.out" }
+          );
+        }
+
+        setAuditLedger(prev => [
+          {
+            id: prev.length + 1,
+            time: new Date().toISOString().substring(11, 19) + ' UTC',
+            actor: 'SRE-Commander (Keshav Jadam)',
+            role: userRole,
+            action: 'PRODUCTION_ROLLBACK_AUTHORIZED',
+            reason: typedJustification || 'Full autonomous hotfix deployment',
+            ref: 'PR #105 (git revert a89f31c)'
+          },
+          ...prev
+        ]);
+
+        try {
+          await fetch('/api/rollback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prNumber: 104,
+              commitSha: 'a89f31c',
+              approver: 'Keshav Jadam',
+              role: userRole,
+              justification: typedJustification || 'Automated multi-fault hotfix rollback authorized by Incident Commander',
+              safetyGatesConfirmed: true,
+              recordedSeconds: elapsedSeconds
+            })
+          });
+          fetchSecurityState();
+        } catch (err) {}
+      };
+
+      // ─── 10. FULL SIMULATOR RESET ───
+      const handleFullReset = () => {
+        setCurrentStep(1);
+        setIsRunning(false);
+        setElapsedSeconds(0);
+        setHasBenchmarkStarted(false);
+        setTestApproved(false);
+        setRecordedDuration(null);
+        setIncidentState('INVESTIGATING');
+        setErrorRate(94.8);
+        setAvailability('91.2%');
+        setP95Latency(1420);
+        setCpuUsage(88.4);
+        setMemoryUsage(74.2);
+        setTypedJustification('');
+        setIncidentErrors(INITIAL_ERRORS);
+        setSelectedErrorId('err-1');
+        setSwarmStatus('COMPLETED');
+        setSwarmProgress(100);
+      };
+
+      // Immutable Audit Ledger
+      const [auditLedger, setAuditLedger] = useState([
+        { id: 1, time: '02:14:25 UTC', actor: 'Prometheus-AlertManager', role: 'System', action: 'INCIDENT_DETECTED', reason: 'HTTP 500 error spike breach threshold > 2.0%', ref: 'INC-2026-0814' },
+        { id: 2, time: '02:14:38 UTC', actor: 'SRE-Zero Pipeline', role: 'Agent', action: 'TRIAGE_COMPLETED', reason: 'Correlated 5 microservice crashes to PR #104 in commit a89f31c', ref: 'PR #104' },
+        { id: 3, time: '02:15:02 UTC', actor: 'RemediationVerifierWorker', role: 'Agent', action: 'SAFETY_CHECK_PASSED', reason: 'Evaluated DDL tables: No schema migrations in commit a89f31c', ref: 'SAFE_REVERT' }
+      ]);
+
+      // Telemetry Logs
+      const initialLogs = useMemo(() => [
+        { id: 1, time: '02:14:18.102', pod: 'payment-svc', level: 'INFO', msg: 'Incoming POST /api/v2/checkout from buyer_***@example.com (Auth: sk_live_***)' },
+        { id: 2, time: '02:14:21.002', pod: 'payment-svc', level: 'FATAL', msg: "Traceback: KeyError: 'currency_code' at services/payment/checkout_handler.py:142" },
+        { id: 3, time: '02:14:22.109', pod: 'auth-svc', level: 'FATAL', msg: "Traceback: AttributeError: 'NoneType' object has no attribute 'split' at jwt_validator.py:88" },
+        { id: 4, time: '02:14:23.004', pod: 'cart-svc', level: 'WARN', msg: "ConnectionResetError: Redis cluster connection pool exhausted at redis_session.py:64" },
+        { id: 5, time: '02:14:24.312', pod: 'order-svc', level: 'ERROR', msg: "ZeroDivisionError: integer division or modulo by zero at database_pool.py:115" },
+        { id: 6, time: '02:14:25.110', pod: 'notification-svc', level: 'TIMEOUT', msg: "TimeoutError: Webhook gateway HTTP POST timeout after 30000ms at webhook_dispatcher.py:53" }
+      ], []);
+
+      // ─── 11. BESPOKE NON-LINE GRAPH DATA (ACID MINIMALIST HORIZON HISTOGRAM) ───
+      const histogramData = useMemo(() => {
+        const isResolved = incidentState === 'RESOLVED';
+        return [
+          { time: '02:08', reqs: 1200, errs: 1, rate: 0.1, label: 'Baseline Normal' },
+          { time: '02:10', reqs: 1240, errs: 2, rate: 0.2, label: 'Baseline Normal' },
+          { time: '02:12', reqs: 1280, errs: 1, rate: 0.1, label: 'Pre-Deployment' },
+          { time: '02:13', reqs: 1310, errs: 5, rate: 0.4, label: 'PR #104 Merged' },
+          { time: '02:14', reqs: 1480, errs: isResolved ? 80 : 920, rate: isResolved ? 5.4 : 62.5, culprit: true, label: '⚡ Surge Triggered' },
+          { time: '02:15', reqs: 1520, errs: isResolved ? 20 : 1440, rate: isResolved ? 1.3 : 94.8, culprit: true, label: '🔴 P0 Peak Outage' },
+          { time: '02:16', reqs: 1490, errs: isResolved ? 5 : 1430, rate: isResolved ? 0.3 : 96.1, label: 'Hotfix Ingested' },
+          { time: '02:17', reqs: 1450, errs: isResolved ? 1 : 1380, rate: isResolved ? 0.05 : 95.2, label: isResolved ? '🟢 Rollback Deployed' : 'Outage Active' },
+          { time: '02:18', reqs: 1460, errs: isResolved ? 0 : 1385, rate: isResolved ? 0.02 : 94.8, label: isResolved ? '✓ Cluster Healthy' : 'Failing' }
+        ];
+      }, [incidentState]);
+
+      return (
+        <div className="min-h-screen flex flex-col font-sans bg-[#0B0C0E]">
+          
+          {/* ─── ACID MINIMALIST TOP NAVBAR ─── */}
+          <header className="sticky top-0 z-40 bg-[#111317]/90 backdrop-blur-md border-b border-white/10 px-6 py-3 flex items-center justify-between">
+            
+            {/* Brand & High-Tech Coordinates */}
+            <div className="flex items-center gap-4">
+              <div className="w-9 h-9 rounded-md bg-[#111111] border border-white/20 flex items-center justify-center">
+                <span className="font-mono font-black text-[#A3E635] text-sm">S0</span>
+              </div>
+              
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <span className="font-black text-white text-lg tracking-tighter">
+                    SRE-ZERO<span className="text-[#A3E635]">.</span>
+                  </span>
+                  <span className="bg-[#A3E635] text-black text-[10px] font-mono font-black px-2 py-0.5 rounded tracking-wider">
+                    DEV-OPS // 2026
+                  </span>
+                  
+                  {/* Google AI Model Tag */}
+                  <div className="hidden sm:flex items-center gap-2 bg-[#181C21] border border-white/15 px-3 py-0.5 rounded text-xs font-mono">
+                    <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-pulse"></span>
+                    <span className="text-zinc-300">AI ENGINE: <strong className="text-white">GEMINI 4 HYDROGEN</strong></span>
+                    <span className="text-[#A3E635] text-[10px] bg-black/50 px-1.5 py-0.2 rounded border border-white/10">[1.0M TOKENS]</span>
+                  </div>
+                </div>
+                <div className="text-[11px] text-zinc-400 font-mono tracking-tight">
+                  Autonomous Multi-Error SRE Incident Command Platform
+                </div>
+              </div>
+            </div>
+
+            {/* Central 5-Stage Incident Lifecycle */}
+            <div className="hidden lg:flex items-center gap-1 bg-[#16191D] border border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-mono">
+              <span className="text-zinc-500 mr-1 uppercase tracking-wider text-[10px]">// LIFECYCLE:</span>
+              
+              <span className={`px-2 py-0.5 rounded transition ${
+                incidentState === 'DETECTED' ? 'bg-[#FB7185] text-white font-bold' : 'text-zinc-500'
+              }`}>
+                [01] DETECTED
+              </span>
+              <span className="text-zinc-600">›</span>
+              
+              <span className={`px-2 py-0.5 rounded transition ${
+                incidentState === 'INVESTIGATING' ? 'bg-[#A3E635] text-black font-bold animate-pulse' : 'text-zinc-500'
+              }`}>
+                [02] INVESTIGATING
+              </span>
+              <span className="text-zinc-600">›</span>
+              
+              <span className={`px-2 py-0.5 rounded transition ${
+                incidentState === 'MITIGATING' ? 'bg-[#A78BFA] text-white font-bold' : 'text-zinc-500'
+              }`}>
+                [03] MITIGATING
+              </span>
+              <span className="text-zinc-600">›</span>
+              
+              <span className={`px-2 py-0.5 rounded transition ${
+                incidentState === 'VERIFYING' ? 'bg-[#38BDF8] text-black font-bold' : 'text-zinc-500'
+              }`}>
+                [04] VERIFYING
+              </span>
+              <span className="text-zinc-600">›</span>
+              
+              <span className={`px-2 py-0.5 rounded transition ${
+                incidentState === 'RESOLVED' ? 'bg-[#A3E635] text-black font-bold' : 'text-zinc-500'
+              }`}>
+                [05] RESOLVED
+              </span>
+            </div>
+
+            {/* Role & Tactical Controls */}
+            <div className="flex items-center gap-2.5">
+              {/* Enterprise Hybrid Security Mode Switcher */}
+              <div className="flex items-center gap-1.5 bg-[#16191D] border border-white/15 rounded-lg px-2.5 py-1">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: securityMode === 'HYBRID' ? '#A3E635' : '#FB7185' }}></span>
+                <span className="text-zinc-400 text-[10px] font-mono uppercase font-bold">SECURITY:</span>
+                <select 
+                  value={securityMode} 
+                  onChange={handleToggleSecurityMode}
+                  className="bg-transparent text-white font-bold text-xs border-0 focus:outline-none cursor-pointer font-mono"
+                  title="Hybrid Mode: Sanitized evidence sent to AI after approval. Restricted Mode: External AI blocked, 100% on-premises heuristics."
+                >
+                  <option value="HYBRID" className="bg-[#131518] text-white">🛡️ Hybrid (Sanitized AI)</option>
+                  <option value="RESTRICTED" className="bg-[#131518] text-white">🔒 Restricted (Zero External AI)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-[#16191D] border border-white/15 rounded-lg px-2.5 py-1">
+                <span className="text-zinc-400 text-[10px] font-mono uppercase font-bold">ROLE:</span>
+                <select 
+                  value={userRole} 
+                  onChange={(e) => setUserRole(e.target.value)}
+                  className="bg-transparent text-white font-bold text-xs border-0 focus:outline-none cursor-pointer font-mono"
+                >
+                  <option value="Approver (Incident Commander)" className="bg-black text-white">Approver (Commander)</option>
+                  <option value="Engineer (Investigator)" className="bg-black text-white">Engineer (Investigator)</option>
+                  <option value="Viewer (Read-Only)" className="bg-black text-white">Viewer (Read-Only)</option>
+                </select>
+              </div>
+
+              <button
+                onClick={() => setActiveView('integrations')}
+                className="flex items-center gap-1.5 bg-[#181C21] hover:bg-[#222830] border border-[#A3E635]/40 text-[#A3E635] px-3 py-1 rounded-lg text-xs font-mono font-bold transition shadow-[0_0_10px_rgba(163,230,53,0.15)]"
+                title="Connect external microservices, APIs or Kubernetes clusters to SRE-Zero"
+              >
+                <Icons.Cable />
+                <span>CONNECT APP</span>
+              </button>
+
+              <button 
+                onClick={handleFullReset}
+                className="flex items-center gap-1.5 bg-[#1C2127] hover:bg-[#FB7185] hover:text-white border border-white/20 px-3 py-1 rounded-lg text-zinc-300 text-xs font-mono font-bold transition"
+              >
+                <Icons.RotateCcw />
+                <span>RESET</span>
+              </button>
+            </div>
+          </header>
+
+          {/* ─── TAB NAVIGATION: 8 MISSION MODULES ─── */}
+          <nav className="bg-[#111317] border-b border-white/10 px-6 py-2 flex items-center justify-between overflow-x-auto">
+            <div className="flex items-center gap-1.5 shrink-0">
+              {[
+                { id: 'overview', label: '[01] OVERVIEW', icon: Icons.Activity },
+                { id: 'code_diff', label: `[02] CODE ERRORS (${unresolvedFaultCount})`, icon: Icons.GitBranch, badge: unresolvedFaultCount > 0 },
+                { id: 'incidents', label: '[03] INCIDENTS', icon: Icons.ShieldAlert },
+                { id: 'rca', label: '[04] AI RCA', icon: Icons.Sparkles },
+                { id: 'logs', label: '[05] LIVE LOGS', icon: Icons.Terminal },
+                { id: 'recovery', label: '[06] SAFETY GATES', icon: Icons.ShieldCheck },
+                { id: 'integrations', label: '[07] INTEGRATIONS', icon: Icons.Cable },
+                { id: 'settings', label: '[08] AUDIT LEDGER', icon: Icons.FileText }
+              ].map(tab => {
+                const IconComponent = tab.icon;
+                const isActive = activeView === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveView(tab.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition flex items-center gap-2 border ${
+                      isActive 
+                        ? 'bg-[#222830] border-[#A3E635] text-[#A3E635] shadow-[0_0_12px_rgba(163, 230, 53,0.2)]' 
+                        : 'border-transparent text-zinc-400 hover:text-white hover:border-white/20 hover:bg-[#181C21]'
+                    }`}
+                  >
+                    <span><IconComponent /></span>
+                    <span>{tab.label}</span>
+                    {tab.badge && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#FB7185] animate-ping ml-0.5"></span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="hidden xl:flex items-center gap-2 text-xs font-mono text-zinc-300 bg-[#181C21] border border-white/15 px-3 py-1 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-[#A3E635]"></span>
+              <span>CLUSTER: <strong className="text-white">ASIA-SOUTH1 // GKE-PROD-01</strong></span>
+            </div>
+          </nav>
+
+          {/* ─── 3-KPI HIGH IMPACT HERO TELEMETRY CARDS ─── */}
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-5 px-6 py-4">
+            
+            {/* KPI 1: MTTR Timer with 000s Start & Interactive Trigger */}
+            <div className="acid-box p-5 flex flex-col justify-between border-l-4 border-l-[#A3E635]">
+              <div className="flex items-center justify-between text-xs font-mono font-bold tracking-wider text-zinc-400">
+                <span>[01] // MEAN TIME TO RESOLUTION</span>
+                <span className="bg-[#A3E635]/10 text-[#A3E635] border border-[#A3E635]/30 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
+                  -99.3% VS MANUAL
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-3 my-3">
+                <span id="kpi-timer-display" className="text-4xl font-black font-mono tabular-nums text-[#A3E635] tracking-tight">
+                  {formatSecondsPadded(elapsedSeconds)}
+                </span>
+                
+                {testApproved && (
+                  <span className="text-xs font-bold font-mono text-black bg-[#A3E635] px-2.5 py-0.5 rounded flex items-center gap-1">
+                    <Icons.Check /> APPROVED
+                  </span>
+                )}
+                {isRunning && (
+                  <span className="text-[11px] font-bold font-mono text-white bg-[#FB7185] px-2 py-0.5 rounded animate-pulse">
+                    TIMING RUNNING
+                  </span>
+                )}
+              </div>
+
+              <div>
+                {!hasBenchmarkStarted && !testApproved && (
+                  <button
+                    onClick={handleStartPerformanceBenchmark}
+                    className="w-full acid-btn-primary py-2.5 px-4 text-xs font-black flex items-center justify-center gap-2"
+                  >
+                    <Icons.Zap />
+                    <span>START BENCHMARK // RUN SRE AGENT</span>
+                  </button>
+                )}
+
+                {hasBenchmarkStarted && !testApproved && (
+                  <div className="flex items-center justify-between text-xs font-mono text-zinc-400 bg-black/40 p-2 rounded border border-white/10">
+                    <span className="text-[#A3E635] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-ping"></span>
+                      Autonomous Triage Active
+                    </span>
+                    <button
+                      onClick={handleApplyAndRollback}
+                      className="text-[#A3E635] font-bold hover:underline"
+                    >
+                      Instant Rollback ➔
+                    </button>
+                  </div>
+                )}
+
+                {testApproved && (
+                  <div className="text-xs font-mono text-zinc-300 bg-[#181C21] p-2 rounded border border-white/10 flex items-center justify-between">
+                    <span className="text-[#A3E635]">Audit Locked: {recordedDuration}</span>
+                    <button onClick={handleFullReset} className="text-zinc-400 hover:text-white underline">Re-run</button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* KPI 2: Active Production Faults (ZERO-ON-APPLY) */}
+            <div id="kpi-faults-box" className="acid-box p-5 flex flex-col justify-between border-l-4 border-l-[#FB7185]">
+              <div className="flex items-center justify-between text-xs font-mono font-bold tracking-wider text-zinc-400">
+                <span>[02] // ACTIVE PRODUCTION FAULTS</span>
+                <span className="bg-white/10 text-white px-2 py-0.5 rounded text-[10px] font-mono font-bold border border-white/20">
+                  ZERO-ON-APPLY
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-3 my-3">
+                <span className={`text-4xl font-black font-mono tracking-tight ${
+                  unresolvedFaultCount > 0 ? 'text-[#FB7185]' : 'text-[#A3E635]'
+                }`}>
+                  {unresolvedFaultCount} <span className="text-lg font-sans font-bold text-zinc-400">of 5 Active</span>
+                </span>
+                {unresolvedFaultCount === 0 && (
+                  <span className="bg-[#A3E635] text-black font-black text-xs px-2.5 py-0.5 rounded font-mono">
+                    ALL CLEARED
+                  </span>
+                )}
+              </div>
+
+              <div className="text-xs font-mono text-zinc-400 bg-black/40 p-2.5 rounded border border-white/10">
+                {unresolvedFaultCount === 0 
+                  ? "✓ All 5 microservice exceptions resolved and safely deployed."
+                  : `⚠️ ${unresolvedFaultCount} unhandled crashes remaining across Python services.`}
+              </div>
+            </div>
+
+            {/* KPI 3: Active AI Context & Model */}
+            <div className="acid-box p-5 flex flex-col justify-between border-l-4 border-l-[#38BDF8]">
+              <div className="flex items-center justify-between text-xs font-mono font-bold tracking-wider text-zinc-400">
+                <span>[03] // AUTONOMOUS AI ENGINE</span>
+                <span className="bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/30 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
+                  HYDROGEN
+                </span>
+              </div>
+
+              <div className="my-3">
+                <span className="text-2xl font-black text-white tracking-tight">Gemini 4 Hydrogen</span>
+                <span className="text-xs font-mono text-zinc-400 block mt-0.5">1,000,000 Token Context Window</span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs font-mono bg-black/40 p-2.5 rounded border border-white/10">
+                <span className="text-zinc-400">AST Correlation Engine</span>
+                <span className="text-[#A3E635] bg-white/5 px-2 py-0.5 rounded border border-white/10">Google AI Studio</span>
+              </div>
+            </div>
+
+          </section>
+
+          {/* ─── DYNAMIC WORKSPACE BODY ─── */}
+          <main ref={viewContainerRef} className="p-6 flex-1 space-y-6">
+            
+            {/* VIEW 1: OVERVIEW DASHBOARD */}
+            {activeView === 'overview' && (
+              <div className="space-y-6">
+
+                {/* ─── STEP-BY-STEP INCIDENT COMMAND GUIDED RUNBOOK (1 ➔ 2 ➔ 3 ➔ 4 ➔ 5) ─── */}
+                <div className="acid-box p-5 space-y-3 border-l-4 border-l-[#A3E635]">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-[#A3E635] text-black font-mono font-bold text-[10px] px-2 py-0.5 rounded tracking-wider">
+                        GUIDED RUNBOOK
+                      </span>
+                      <h3 className="text-sm font-bold text-white tracking-tight">
+                        5-Step Autonomous Incident Lifecycle (Step-by-Step Actions)
+                      </h3>
+                    </div>
+                    <span className="text-xs font-mono text-zinc-400">
+                      Step {currentStep} of 5 Active • Click any step to inspect or execute
+                    </span>
+                  </div>
+
+                  {/* 5 Chronological Step Pillars */}
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 pt-1">
+                    
+                    {/* Step 1 */}
+                    <div 
+                      onClick={() => setCurrentStep(1)}
+                      className={`p-3 rounded-lg border text-left cursor-pointer transition flex flex-col justify-between ${
+                        currentStep === 1 
+                          ? 'bg-[#181C21] border-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]' 
+                          : 'bg-[#111317] border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-mono font-bold text-[11px] text-zinc-400">[STEP 01]</span>
+                        {hasBenchmarkStarted ? (
+                          <span className="text-[#A3E635] text-xs">✓ DONE</span>
+                        ) : (
+                          <span className="text-[#FB7185] text-[10px] font-mono">READY</span>
+                        )}
+                      </div>
+                      <div className="font-bold text-xs text-white">Ingest & Detect</div>
+                      <div className="text-[10px] font-mono text-zinc-400 mt-1">HTTP 500 &gt;2.0% spike</div>
+                      {!hasBenchmarkStarted && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleStartPerformanceBenchmark(); }}
+                          className="mt-2.5 w-full acid-btn-primary py-1 text-[10px]"
+                        >
+                          Trigger Ingest ➔
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Step 2 */}
+                    <div 
+                      onClick={() => setCurrentStep(2)}
+                      className={`p-3 rounded-lg border text-left cursor-pointer transition flex flex-col justify-between ${
+                        currentStep === 2 
+                          ? 'bg-[#181C21] border-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]' 
+                          : 'bg-[#111317] border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-mono font-bold text-[11px] text-zinc-400">[STEP 02]</span>
+                        {swarmStatus === 'COMPLETED' ? (
+                          <span className="text-[#A3E635] text-xs">✓ DONE</span>
+                        ) : swarmStatus === 'RUNNING' ? (
+                          <span className="text-[#38BDF8] text-[10px] font-mono animate-pulse">RUNNING...</span>
+                        ) : (
+                          <span className="text-zinc-500 text-[10px] font-mono">WAITING</span>
+                        )}
+                      </div>
+                      <div className="font-bold text-xs text-white">AI Swarm Triage</div>
+                      <div className="text-[10px] font-mono text-zinc-400 mt-1">AST Log & Git Blame</div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); triggerAiSwarmWithSecurityGate(); }}
+                        disabled={swarmStatus === 'RUNNING'}
+                        className="mt-2.5 w-full acid-btn-secondary py-1 text-[10px] text-zinc-200"
+                      >
+                        {swarmStatus === 'RUNNING' ? 'Triaging...' : 'Run Swarm ➔'}
+                      </button>
+                    </div>
+
+                    {/* Step 3 */}
+                    <div 
+                      onClick={() => { setCurrentStep(3); setActiveView('code_diff'); }}
+                      className={`p-3 rounded-lg border text-left cursor-pointer transition flex flex-col justify-between ${
+                        currentStep === 3 
+                          ? 'bg-[#181C21] border-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]' 
+                          : 'bg-[#111317] border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-mono font-bold text-[11px] text-zinc-400">[STEP 03]</span>
+                        {unresolvedFaultCount === 0 ? (
+                          <span className="text-[#A3E635] text-xs">✓ ALL FIXED</span>
+                        ) : (
+                          <span className="text-[#FB7185] text-[10px] font-mono">{unresolvedFaultCount} LEFT</span>
+                        )}
+                      </div>
+                      <div className="font-bold text-xs text-white">Line Code Hotfix</div>
+                      <div className="text-[10px] font-mono text-zinc-400 mt-1">5 Microservice Diffs</div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setActiveView('code_diff'); }}
+                        className="mt-2.5 w-full acid-btn-secondary py-1 text-[10px] text-zinc-200"
+                      >
+                        Inspect Diff ➔
+                      </button>
+                    </div>
+
+                    {/* Step 4 */}
+                    <div 
+                      onClick={() => { setCurrentStep(4); setActiveView('recovery'); }}
+                      className={`p-3 rounded-lg border text-left cursor-pointer transition flex flex-col justify-between ${
+                        currentStep === 4 
+                          ? 'bg-[#181C21] border-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]' 
+                          : 'bg-[#111317] border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-mono font-bold text-[11px] text-zinc-400">[STEP 04]</span>
+                        <span className="text-[#A3E635] text-xs">✓ 4/4 PASSED</span>
+                      </div>
+                      <div className="font-bold text-xs text-white">Safety Gates</div>
+                      <div className="text-[10px] font-mono text-zinc-400 mt-1">DDL & Kafka Probes</div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setActiveView('recovery'); }}
+                        className="mt-2.5 w-full acid-btn-secondary py-1 text-[10px] text-zinc-200"
+                      >
+                        View Gates ➔
+                      </button>
+                    </div>
+
+                    {/* Step 5 */}
+                    <div 
+                      onClick={() => setCurrentStep(5)}
+                      className={`p-3 rounded-lg border text-left cursor-pointer transition flex flex-col justify-between ${
+                        currentStep === 5 
+                          ? 'bg-[#181C21] border-[#A3E635] shadow-[0_0_12px_rgba(163,230,53,0.2)]' 
+                          : 'bg-[#111317] border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-mono font-bold text-[11px] text-zinc-400">[STEP 05]</span>
+                        {incidentState === 'RESOLVED' ? (
+                          <span className="text-[#A3E635] text-xs">✓ REVERTED</span>
+                        ) : (
+                          <span className="text-[#FB7185] text-[10px] font-mono">READY</span>
+                        )}
+                      </div>
+                      <div className="font-bold text-xs text-white">Rollback & Restore</div>
+                      <div className="text-[10px] font-mono text-zinc-400 mt-1">99.98% SLA Recovered</div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleApplyAndRollback(); }}
+                        disabled={incidentState === 'RESOLVED'}
+                        className="mt-2.5 w-full acid-btn-primary py-1 text-[10px]"
+                      >
+                        {incidentState === 'RESOLVED' ? 'Restored ✓' : 'Rollback ➔'}
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* Left 7 Cols: Stepped Anomaly Horizon Histogram & Code Errors */}
+                <div className="lg:col-span-7 space-y-6">
+                  
+                  {/* ACID MINIMALIST HORIZON HISTOGRAM */}
+                  <div className="acid-box p-6 space-y-4">
+                    
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-[#FB7185] text-white px-2 py-0.5 rounded font-mono font-bold text-[11px]">
+                            HISTOGRAM // 500 ERRORS
+                          </span>
+                          <span className="font-bold text-sm text-white">
+                            HTTP 500 Anomaly Horizon vs Baseline Volume
+                          </span>
+                        </div>
+                        <p className="text-xs font-mono text-zinc-400 mt-1">
+                          Bespoke stepped horizon telemetry. 100% immune to reset & canvas destruction bugs.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs font-mono">
+                        <span className="flex items-center gap-1.5 text-zinc-300">
+                          <span className="w-2.5 h-2.5 bg-[#A3E635] rounded-sm"></span>
+                          Healthy (200 OK)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-zinc-300">
+                          <span className="w-2.5 h-2.5 bg-[#FB7185] rounded-sm"></span>
+                          Failed (500 ERR)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Stepped Anomaly Bars Container */}
+                    <div className="bg-[#0E1013] border border-white/10 p-4 rounded-xl relative">
+                      <div className="flex items-end justify-between gap-2 h-48 pt-6 pb-2 px-1 relative">
+                        
+                        {/* SLA Breach Dotted Horizon Line at 2.0% */}
+                        <div className="absolute top-12 left-0 right-0 border-b border-dashed border-[#FB7185]/70 flex items-center justify-between px-2 pointer-events-none">
+                          <span className="bg-[#FB7185] text-white text-[9px] font-mono font-black px-1.5 py-0.5 rounded">
+                            SLA BREACH THRESHOLD (&gt;2.0%)
+                          </span>
+                          <span className="text-[9px] font-mono text-[#FB7185] font-bold">CRITICAL BREACH ZONE</span>
+                        </div>
+
+                        {histogramData.map((bar, idx) => {
+                          const isSpike = bar.errs > 50;
+                          return (
+                            <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 group relative h-full justify-end">
+                              
+                              {/* Hover Tooltip Card */}
+                              <div className="absolute -top-16 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white p-2 rounded text-[10px] font-mono z-30 pointer-events-none whitespace-nowrap border border-white/20 shadow-xl">
+                                <div><strong className="text-zinc-400">Time:</strong> {bar.time} UTC</div>
+                                <div><strong className="text-zinc-400">Error Rate:</strong> <span className={bar.rate > 2 ? 'text-[#FB7185]' : 'text-[#A3E635]'}>{bar.rate}%</span></div>
+                                <div><strong className="text-zinc-400">Failures:</strong> {bar.errs} req/s</div>
+                                <div><strong className="text-zinc-400">Status:</strong> {bar.label}</div>
+                              </div>
+
+                              {/* Anomaly Bar Pillar */}
+                              <div className="w-full flex flex-col justify-end items-center max-w-[42px] h-full">
+                                
+                                {/* Error Chunk (Laser Red) */}
+                                {bar.errs > 0 && (
+                                  <div 
+                                    className="w-full bg-[#FB7185] rounded-t-sm shadow-[0_0_10px_rgba(251, 113, 133,0.3)] transition-all duration-300"
+                                    style={{ height: `${Math.min(100, Math.max(8, bar.rate))}%` }}
+                                    title={`${bar.rate}% Error Rate`}
+                                  ></div>
+                                )}
+
+                                {/* Healthy Chunk (Acid Lime) */}
+                                <div 
+                                  className="w-full bg-[#A3E635] rounded-b-sm transition-all duration-300"
+                                  style={{ height: `${Math.max(12, 100 - bar.rate * 0.8)}%` }}
+                                ></div>
+                              </div>
+
+                              {/* Time Label */}
+                              <span className={`text-[10px] font-mono font-bold ${isSpike ? 'text-[#FB7185]' : 'text-zinc-500'}`}>
+                                {bar.time}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Milestone Event Badges under Histogram */}
+                      <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-white/10 text-center text-[10px] font-mono">
+                        <div className="bg-[#181C21] p-1.5 rounded border border-white/10">
+                          <span className="text-zinc-500 block">02:08 UTC</span>
+                          <span className="text-zinc-300">Baseline Normal</span>
+                        </div>
+                        <div className="bg-[#222830] p-1.5 rounded border border-[#A3E635]/30 text-[#A3E635]">
+                          <span className="text-zinc-500 block">02:14 UTC</span>
+                          <span>PR #104 Deployed</span>
+                        </div>
+                        <div className="bg-[#221418] p-1.5 rounded border border-[#FB7185]/40 text-[#FB7185]">
+                          <span className="text-zinc-500 block">02:15 UTC</span>
+                          <span>94.8% Outage Peak</span>
+                        </div>
+                        <div className="bg-[#142216] p-1.5 rounded border border-[#A3E635]/40 text-[#A3E635]">
+                          <span className="text-zinc-500 block">02:18 UTC</span>
+                          <span>0.02% Recovered</span>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Operational Telemetry Metrics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="acid-box p-4 text-center">
+                      <span className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Rolling SLA</span>
+                      <div className="text-2xl font-black text-white mt-1 font-mono">{availability}</div>
+                      <span className="text-[10px] font-mono text-zinc-400">Target: 99.9%</span>
+                    </div>
+
+                    <div className="acid-box p-4 text-center">
+                      <span className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">P95 Latency</span>
+                      <div className={`text-2xl font-black mt-1 font-mono ${p95Latency > 500 ? 'text-[#FB7185]' : 'text-[#A3E635]'}`}>
+                        {p95Latency}ms
+                      </div>
+                      <span className="text-[10px] font-mono text-zinc-400">SLO: &lt;800ms</span>
+                    </div>
+
+                    <div className="acid-box p-4 text-center">
+                      <span className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Pod CPU</span>
+                      <div className="text-2xl font-black text-white mt-1 font-mono">{cpuUsage}%</div>
+                      <span className="text-[10px] font-mono text-zinc-400">24/24 Pods Up</span>
+                    </div>
+
+                    <div className="acid-box p-4 text-center">
+                      <span className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Heap Memory</span>
+                      <div className="text-2xl font-black text-[#A78BFA] mt-1 font-mono">{memoryUsage}%</div>
+                      <span className="text-[10px] font-mono text-zinc-400">Active GC</span>
+                    </div>
+                  </div>
+
+                  {/* ACTIVE PRODUCTION CODE FAULTS & LINE-BY-LINE HOTFIXES (DIRECT ON OVERVIEW) */}
+                  <div className="acid-box p-6 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-0.5 rounded font-mono font-bold text-xs ${
+                            unresolvedFaultCount > 0 ? 'bg-[#FB7185] text-white' : 'bg-[#A3E635] text-black'
+                          }`}>
+                            {unresolvedFaultCount > 0 ? `🔥 ACTIVE BUGS: ${unresolvedFaultCount} OF 5` : '🎉 ZERO BUGS REMAINING'}
+                          </span>
+                          <h3 className="text-base font-bold text-white">
+                            Microservice Code Errors in PR #104
+                          </h3>
+                        </div>
+                        <p className="text-xs font-mono text-zinc-400 mt-1">
+                          Har error ki exact file aur line number yahan direct visible hai. Hotfix apply karte hi bug gayab ho jayega!
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setActiveView('code_diff')}
+                          className="acid-btn-secondary px-3.5 py-1.5 text-xs font-mono flex items-center gap-1.5"
+                        >
+                          <span>Open Hotfix Studio (Tab 2)</span>
+                          <span>➔</span>
+                        </button>
+                        {unresolvedFaultCount > 0 && (
+                          <button
+                            onClick={handleApplyAndRollback}
+                            className="acid-btn-primary px-3.5 py-1.5 text-xs uppercase"
+                          >
+                            ⚡ Resolve All 5
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* When All Solved -> Celebratory banner */}
+                    {unresolvedFaultCount === 0 ? (
+                      <div className="bg-[#141E16] border border-[#A3E635] p-6 rounded-xl shadow-[0_0_25px_rgba(163, 230, 53,0.15)] text-center space-y-3">
+                        <div className="text-3xl">🎉 🚀</div>
+                        <h4 className="text-lg font-black text-[#A3E635]">SAARE 5 ERRORS SOLVE HO GAYE & GAYAB HO GAYE!</h4>
+                        <p className="text-xs font-mono text-zinc-300 max-w-lg mx-auto leading-relaxed">
+                          Saare microservice bugs safe fallback default ke saath theek ho chuke hain. Cluster error rate 0.02% par restore ho gaya hai!
+                        </p>
+                        <div className="pt-2 flex flex-wrap justify-center gap-3">
+                          <button
+                            onClick={() => setActiveView('code_diff')}
+                            className="acid-btn-secondary px-4 py-2 text-xs font-mono uppercase"
+                          >
+                            Inspect Resolved Diff History (Tab 2) ➔
+                          </button>
+                          <button
+                            onClick={handleFullReset}
+                            className="acid-btn-primary px-4 py-2 text-xs uppercase"
+                          >
+                            🔄 Re-test Errors (Reset)
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Active Faults List: Unresolved items only! When resolved, they disappear ("gayab ho jayenge") */
+                      <div className="space-y-3">
+                        {incidentErrors.filter(err => !err.resolved).map((err) => (
+                          <div 
+                            key={err.id} 
+                            className="bg-[#16191D] border border-white/15 hover:border-[#A3E635]/50 rounded-xl p-4 space-y-3 transition"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="bg-[#A3E635] text-black font-mono font-black text-xs px-2.5 py-0.5 rounded">
+                                  LINE {err.line}
+                                </span>
+                                <span className="font-mono font-bold text-xs text-white">
+                                  {err.file}
+                                </span>
+                                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-red-950/60 text-[#FB7185] border border-[#FB7185]/40">
+                                  {err.severity}
+                                </span>
+                              </div>
+
+                              <button
+                                onClick={() => handleResolveSingleError(err.id)}
+                                className="acid-btn-primary text-xs px-3.5 py-1.5 uppercase flex items-center gap-1.5"
+                              >
+                                <Icons.Zap />
+                                <span>Fix Line {err.line} (Apply Hotfix)</span>
+                              </button>
+                            </div>
+
+                            <div className="text-xs font-mono text-[#FB7185]">
+                              {err.title} — <span className="text-zinc-400 font-sans">{err.cause}</span>
+                            </div>
+
+                            {/* Side-by-side code line change preview */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-[11px] font-mono">
+                              <div className="bg-[#1E1418] border border-[#FB7185]/40 p-2.5 rounded-lg text-zinc-200 overflow-x-auto">
+                                <span className="text-[#FB7185] font-bold block text-[10px] uppercase mb-1">❌ CRASH ON LINE {err.line}:</span>
+                                <div className="text-red-200 whitespace-pre">
+                                  {err.line} -  {err.service === 'payment-service' ? "currency = payload['currency_code']   # KeyError" :
+                                                 err.service === 'auth-service' ? 'token = auth_header.split(" ")[1]   # AttributeError' :
+                                                 err.service === 'cart-service' ? "pool = ConnectionPool(..., max_connections=10) # Exhausted" :
+                                                 err.service === 'order-service' ? "discount_rate = total_discount / order_count # ZeroDivision" :
+                                                 "resp = requests.post(url, timeout=30.0) # 30s Thread Lock"}
+                                </div>
+                              </div>
+                              <div className="bg-[#141E16] border border-[#A3E635]/40 p-2.5 rounded-lg text-zinc-200 overflow-x-auto">
+                                <span className="text-[#A3E635] font-bold block text-[10px] uppercase mb-1">✅ SAFE RESOLVED LINE {err.line}:</span>
+                                <div className="text-lime-200 whitespace-pre">
+                                  {err.line} +  {err.service === 'payment-service' ? "currency = payload.get('currency_code', 'INR') # Safe default" :
+                                                 err.service === 'auth-service' ? 'token = auth_header.split(" ")[1] if auth_header else ""' :
+                                                 err.service === 'cart-service' ? "pool = ConnectionPool(..., max_connections=250, timeout=2.0)" :
+                                                 err.service === 'order-service' ? "discount = (total / count) if count > 0 else 0.0" :
+                                                 "task = async_webhook_queue.delay(...) # Non-blocking 202"}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+
+                {/* Right 5 Cols: Multi-Agent Swarm & 1-Click Rollback */}
+                <div className="lg:col-span-5 space-y-6">
+                  
+                  {/* MULTI-AGENT SWARM CONTROLLER */}
+                  <div className="acid-box p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-[#A78BFA] text-white px-2 py-0.5 rounded font-mono font-bold text-xs">
+                            AI SWARM
+                          </span>
+                          <span className="font-bold text-sm text-white">
+                            Multi-Agent Swarm (3 Workers)
+                          </span>
+                        </div>
+                        <span className="text-xs font-mono text-zinc-400">Parallel Triage, Git Blame & Verifier</span>
+                      </div>
+
+                      <button
+                        onClick={triggerAiSwarmWithSecurityGate}
+                        disabled={swarmStatus === 'RUNNING'}
+                        className="acid-btn-primary px-3.5 py-1.5 text-xs font-black flex items-center gap-1.5"
+                      >
+                        <Icons.Zap />
+                        <span>{swarmStatus === 'RUNNING' ? 'Swarm Running...' : 'Activate Swarm'}</span>
+                      </button>
+                    </div>
+
+                    {/* Enterprise Security Notice Banner */}
+                    {securityNotice && (
+                      <div className="bg-[#181C21] border border-[#A3E635]/50 p-2.5 rounded-lg text-xs font-mono text-zinc-300 flex items-center justify-between shadow-[0_0_10px_rgba(163,230,53,0.1)]">
+                        <span>{securityNotice}</span>
+                        <button onClick={() => setSecurityNotice(null)} className="text-zinc-500 hover:text-white text-xs font-bold ml-2">✕</button>
+                      </div>
+                    )}
+
+                    {/* Real-time Progress Bar */}
+                    {swarmStatus === 'RUNNING' && (
+                      <div className="bg-[#1C2127] p-3 rounded-lg border border-white/10">
+                        <div className="flex justify-between text-xs font-mono mb-1.5">
+                          <span className="text-zinc-300">Executing Parallel Workers...</span>
+                          <span className="text-[#A3E635] font-bold">{swarmProgress}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-black rounded-full overflow-hidden border border-white/10">
+                          <div 
+                            className="h-full bg-[#A3E635] transition-all duration-300 shadow-[0_0_10px_rgba(163, 230, 53,0.5)]"
+                            style={{ width: `${swarmProgress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3 Worker Cards */}
+                    <div className="space-y-2.5">
+                      {agentWorkers.map((worker) => (
+                        <div key={worker.id} className="bg-[#181C21] p-3 rounded-lg border border-white/10 hover:border-white/20">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-bold text-xs text-white">{worker.name}</span>
+                            <span className="text-[10px] font-mono bg-[#A3E635]/10 text-[#A3E635] border border-[#A3E635]/30 px-2 py-0.5 rounded font-bold">
+                              {worker.status === 'RUNNING' ? 'Working...' : `DONE (${worker.duration})`}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-400 font-mono">
+                            {worker.status === 'RUNNING' ? worker.activeDetail : worker.resultDetail}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Swarm Console Stream Toggle */}
+                    <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                      <button
+                        onClick={() => setShowSwarmConsole(!showSwarmConsole)}
+                        className="text-xs font-mono font-bold text-zinc-400 hover:text-[#A3E635] flex items-center gap-1 transition"
+                      >
+                        <Icons.Terminal />
+                        <span>{showSwarmConsole ? 'Hide Swarm Terminal Stream ▲' : 'Show Swarm Terminal Stream ▼'}</span>
+                      </button>
+                      <span className="text-[10px] font-mono font-bold text-[#A3E635] bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                        Gemini 4 Hydrogen
+                      </span>
+                    </div>
+
+                    {/* Swarm Console Terminal Box */}
+                    {showSwarmConsole && (
+                      <div className="bg-black text-[#A3E635] p-3 rounded-lg border border-white/15 max-h-36 overflow-y-auto font-mono text-[11px] space-y-1">
+                        {swarmLogs.map((log, idx) => (
+                          <div key={idx} className="flex items-start gap-1.5">
+                            <span className="text-zinc-600 shrink-0">[{log.time}]</span>
+                            <span className="text-zinc-400 shrink-0">&lt;{log.agent}&gt;</span>
+                            <span className="text-white">{log.msg}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                  </div>
+
+                  {/* RCA & 1-CLICK ROLLBACK CONTROLLER */}
+                  <div className="acid-box p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-[#FB7185] text-white px-2 py-0.5 rounded font-mono font-bold text-xs">
+                          P0 CRITICAL OUTAGE
+                        </span>
+                        <span className="text-xs font-mono text-zinc-400">#INC-2026-0814</span>
+                      </div>
+                      <span className="bg-[#A3E635]/10 text-[#A3E635] font-mono font-bold text-xs px-2.5 py-0.5 rounded border border-[#A3E635]/30">
+                        Confidence: 99.4%
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-bold text-white">Autonomous Incident Remediation</h3>
+                    <p className="text-xs font-mono text-zinc-300 leading-relaxed">
+                      Deploy hotfix revert PR #105 to eradicate all 5 production microservice exceptions and recover cluster SLA back to 99.98%.
+                    </p>
+
+                    {/* Approver Justification */}
+                    <div>
+                      <label className="text-xs font-mono font-bold text-zinc-400 block mb-1">
+                        Approver Justification (Min 10 characters):
+                      </label>
+                      <input 
+                        type="text"
+                        placeholder="e.g. Verified rollback safety with SRE commander"
+                        value={typedJustification}
+                        onChange={(e) => setTypedJustification(e.target.value)}
+                        className="w-full bg-[#181C21] border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-[#A3E635] transition"
+                      />
+                    </div>
+
+                    {/* PRIMARY 1-CLICK ROLLBACK BUTTON */}
+                    <button
+                      onClick={handleApplyAndRollback}
+                      disabled={incidentState === 'RESOLVED'}
+                      className={`w-full py-3.5 px-4 rounded-lg font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 ${
+                        incidentState === 'RESOLVED'
+                          ? 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed'
+                          : 'acid-btn-primary'
+                      }`}
+                    >
+                      <Icons.Zap />
+                      <span>Apply & 1-Click Rollback PR (Resolve All)</span>
+                    </button>
+
+                    {testApproved && (
+                      <div className="bg-[#141E16] border border-[#A3E635] p-3 rounded-lg text-xs font-mono text-[#A3E635] text-center shadow-[0_0_15px_rgba(163, 230, 53,0.15)]">
+                        ✓ Performance Audit Approved: Remediated in <strong>{recordedDuration}</strong>. All 5 bugs zeroed!
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+
+              </div>
+              </div>
+            )}
+
+            {/* VIEW 2: MULTI-ERROR CODE REPOSITORY & UNIFIED BEFORE/AFTER DIFF */}
+            {activeView === 'code_diff' && (
+              <div className="acid-box p-6 space-y-6">
+                
+                {/* Header */}
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-[#FB7185] text-white px-2.5 py-0.5 rounded font-mono font-bold text-xs">
+                        ACTIVE FAULTS: {unresolvedFaultCount} OF 5
+                      </span>
+                      <h2 className="text-xl font-bold text-white tracking-tight">
+                        Multi-Error Code Resolution & Hotfix Inspector
+                      </h2>
+                    </div>
+                    <p className="text-xs font-mono text-zinc-400 mt-1">
+                      Har error ko inspect karein, line-by-line before/after diff check karein, aur individually fix karein!
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleApplyAndRollback}
+                    disabled={unresolvedFaultCount === 0}
+                    className="acid-btn-primary px-4 py-2 text-xs uppercase"
+                  >
+                    ⚡ Resolve & Rollback All Faults at Once
+                  </button>
+                </div>
+
+                {/* 5-Error Selector Pills */}
+                <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                  {incidentErrors.map((err, idx) => (
+                    <button
+                      key={err.id}
+                      onClick={() => setSelectedErrorId(err.id)}
+                      className={`p-3 rounded-lg border text-left transition flex flex-col justify-between ${
+                        selectedErrorId === err.id 
+                          ? 'bg-[#222830] border-[#A3E635] shadow-[0_0_15px_rgba(163, 230, 53,0.2)]' 
+                          : 'bg-[#0E0E0E] border-white/15 hover:border-white/30'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-mono font-bold text-xs text-zinc-400">#{idx + 1}</span>
+                        {err.resolved ? (
+                          <span className="bg-[#A3E635]/10 text-[#A3E635] border border-[#A3E635]/30 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
+                            RESOLVED
+                          </span>
+                        ) : (
+                          <span className="bg-[#FB7185]/20 text-[#FB7185] border border-[#FB7185]/40 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
+                            ACTIVE
+                          </span>
+                        )}
+                      </div>
+                      <div className="font-bold text-xs text-white truncate">{err.title}</div>
+                      <div className="text-[10px] font-mono text-zinc-500 mt-0.5 truncate">{err.service}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* CELEBRATION BANNER WHEN ALL 5 RESOLVED */}
+                {unresolvedFaultCount === 0 && (
+                  <div className="bg-[#141E16] border border-[#A3E635] p-5 rounded-xl shadow-[0_0_20px_rgba(163, 230, 53,0.15)] flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">🎉</span>
+                      <div>
+                        <h3 className="text-base font-black text-[#A3E635] uppercase tracking-tight">
+                          ALL 5 PRODUCTION MICROSERVICE FAULTS RESOLVED IN CODE!
+                        </h3>
+                        <p className="text-xs font-mono text-zinc-300 mt-0.5">
+                          Sabhi 5 errors theek ho chuke hain aur PR #105 me merge ho gaye hain. Cluster error rate 0.02% par normal hai.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleFullReset}
+                        className="acid-btn-secondary px-4 py-2 text-xs font-mono uppercase"
+                      >
+                        🔄 Re-test / Reset
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Selected Error Inspection Card */}
+                <div className="bg-[#16191D] border border-white/15 rounded-xl p-6 space-y-5">
+                  
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-zinc-800 text-zinc-200 font-mono font-bold text-xs px-2.5 py-0.5 rounded">
+                          {selectedError.service}
+                        </span>
+                        <span className="font-mono font-bold text-sm text-[#A3E635]">
+                          {selectedError.file}:{selectedError.line}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-[#FB7185] mt-1">
+                        {selectedError.title}
+                      </h3>
+                      <p className="text-xs font-mono text-zinc-300 mt-1">
+                        <strong className="text-zinc-500">Root Cause:</strong> {selectedError.cause}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {selectedError.resolved ? (
+                        <span className="bg-[#A3E635]/10 text-[#A3E635] border border-[#A3E635]/30 font-mono font-bold text-xs px-3 py-1.5 rounded flex items-center gap-1">
+                          <Icons.Check /> Fault Resolved in Code
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleResolveSingleError(selectedError.id)}
+                          className="acid-btn-primary font-bold text-xs px-4 py-2 uppercase"
+                        >
+                          ✓ Apply Hotfix For This Error
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Unified Side-by-Side Diff Box */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    {/* BEFORE DIFF (RED CRASH) */}
+                    <div className="border border-[#FB7185]/40 rounded-lg overflow-hidden bg-[#1A1215]">
+                      <div className="bg-[#FB7185]/20 text-[#FB7185] p-2 font-mono font-bold text-xs border-b border-[#FB7185]/30 flex justify-between">
+                        <span>BEFORE (PR #104 Faulty Deploy)</span>
+                        <span>LINE: {selectedError.line}</span>
+                      </div>
+                      <pre className="p-3 font-mono text-xs leading-relaxed overflow-x-auto text-red-200">
+                        {selectedError.beforeCode}
+                      </pre>
+                    </div>
+
+                    {/* AFTER DIFF (GREEN RESOLVED) */}
+                    <div className="border border-[#A3E635]/40 rounded-lg overflow-hidden bg-[#121A14]">
+                      <div className="bg-[#A3E635]/20 text-[#A3E635] p-2 font-mono font-bold text-xs border-b border-[#A3E635]/30 flex justify-between">
+                        <span>AFTER (PR #105 SRE-Zero Hotfix)</span>
+                        <span>STATUS: SAFE FALLBACK</span>
+                      </div>
+                      <pre className="p-3 font-mono text-xs leading-relaxed overflow-x-auto text-lime-200">
+                        {selectedError.afterCode}
+                      </pre>
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* VIEW 3: INCIDENTS QUEUE */}
+            {activeView === 'incidents' && (
+              <div className="acid-box p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Active & Historic Incidents Queue</h2>
+                    <p className="text-xs font-mono text-zinc-400">Production anomalies across Kubernetes microservices</p>
+                  </div>
+                  <button 
+                    onClick={handleStartPerformanceBenchmark}
+                    className="acid-btn-danger px-3 py-1.5 text-xs font-mono font-bold"
+                  >
+                    + Trigger Demo Incident
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="bg-[#16191D] p-4 rounded-lg border border-white/15 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-[#FB7185] text-white px-2 py-0.5 rounded font-mono font-bold text-xs">
+                          P0 CRITICAL
+                        </span>
+                        <span className="font-bold text-sm text-white">INC-2026-0814: Multi-Service Outage (5 Faults)</span>
+                      </div>
+                      <p className="text-xs font-mono text-zinc-400 mt-1">
+                        Signatures: KeyError, AttributeError, ConnectionResetError, ZeroDivisionError, TimeoutError
+                      </p>
+                      <div className="text-[11px] font-mono text-zinc-500 mt-1">
+                        Detected: 02:14:22 UTC • Affected Endpoints: [/api/v2/checkout, /api/auth, /api/cart]
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className={`px-3 py-1 rounded text-xs font-mono font-bold border ${
+                        incidentState === 'RESOLVED' ? 'bg-[#A3E635]/10 text-[#A3E635] border-[#A3E635]/30' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                      }`}>
+                        {incidentState}
+                      </span>
+                      <button 
+                        onClick={() => setActiveView('code_diff')}
+                        className="block mt-2 font-mono text-xs text-[#A3E635] hover:underline"
+                      >
+                        Inspect Code Diff ➔
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 4: AI RCA (ROOT CAUSE ANALYSIS) */}
+            {activeView === 'rca' && (
+              <div className="acid-box p-6 space-y-6">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Gemini 4 Hydrogen Root Cause Synthesis</h2>
+                    <p className="text-xs font-mono text-zinc-400">Multi-modal AST correlation across 5 repositories and GKE pod logs</p>
+                  </div>
+                  <span className="bg-[#A3E635]/10 text-[#A3E635] border border-[#A3E635]/30 text-xs font-mono font-bold px-3 py-1 rounded">
+                    Confidence: 99.4%
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  <div className="lg:col-span-2 space-y-4">
+                    <div className="bg-[#181C21] p-4 rounded-lg border border-white/10 space-y-3 font-mono text-xs leading-relaxed text-zinc-300">
+                      <div className="font-bold text-white border-b border-white/10 pb-1">
+                        [SYNTHESIS REPORT] Executive Summary
+                      </div>
+                      <p>
+                        At 02:14:18 UTC, deployment of Pull Request #104 (commit <code className="text-[#A3E635]">a89f31c</code>) introduced breaking schema changes and synchronous thread bottlenecks across 5 critical microservices.
+                      </p>
+                      <p>
+                        High volume ingress (&gt;120,000 lines/s) triggered cascading pool exhaustion in Redis, while unhandled KeyError and AttributeError in Python request handlers caused an instant HTTP 500 error spike from 0.1% to 94.8%.
+                      </p>
+                      <div className="bg-black/50 p-3 rounded border border-white/10 text-[#A3E635]">
+                        <strong>Recommended Action:</strong> Merge revert hotfix PR #105 to reinstate safe fallback defaults across all 5 endpoints.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-[#181C21] p-4 rounded-lg border border-white/10 space-y-3">
+                      <div className="font-mono font-bold text-xs text-white">
+                        Attributed Commits & Authors
+                      </div>
+                      <div className="text-xs font-mono space-y-2 text-zinc-400">
+                        <div className="border-l-2 border-[#FB7185] pl-2">
+                          <span className="text-white font-bold">commit a89f31c</span> (PR #104)
+                          <div className="text-[11px] text-zinc-500">Author: @johndoe • Merged: 12m ago</div>
+                        </div>
+                        <div className="border-l-2 border-[#A3E635] pl-2">
+                          <span className="text-white font-bold">commit f49c12b</span> (PR #105 Hotfix)
+                          <div className="text-[11px] text-zinc-500">Author: SRE-Zero Agent • Status: Verified</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 5: LIVE LOGS */}
+            {activeView === 'logs' && (
+              <div className="acid-box p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Real-Time Kubernetes Ingress Telemetry</h2>
+                    <p className="text-xs font-mono text-zinc-400">GKE Pod logs: payment-svc, auth-svc, cart-svc, order-svc, notification-svc</p>
+                  </div>
+                  <span className="text-xs font-mono text-[#38BDF8]">Throughput: 128,450 Lines/s</span>
+                </div>
+
+                <div className="bg-[#0E1013] p-4 rounded-lg border border-white/10 font-mono text-xs space-y-2 max-h-96 overflow-y-auto">
+                  {initialLogs.map((log) => (
+                    <div key={log.id} className="flex items-start gap-2 border-b border-white/5 pb-1.5">
+                      <span className="text-zinc-600 shrink-0">[{log.time}]</span>
+                      <span className="text-[#A3E635] shrink-0">&lt;{log.pod}&gt;</span>
+                      <span className={`font-bold shrink-0 ${
+                        log.level === 'FATAL' ? 'text-[#FB7185]' : log.level === 'ERROR' ? 'text-red-400' : log.level === 'WARN' ? 'text-yellow-400' : 'text-blue-400'
+                      }`}>
+                        [{log.level}]
+                      </span>
+                      <span className="text-zinc-300">{log.msg}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 6: SAFETY GATES */}
+            {activeView === 'recovery' && (
+              <div className="acid-box p-6 space-y-6">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Autonomous Remediation Safety Gates</h2>
+                    <p className="text-xs font-mono text-zinc-400">Pre-flight checks and rollback safety verifications</p>
+                  </div>
+                  <span className="bg-[#A3E635]/10 text-[#A3E635] border border-[#A3E635]/30 text-xs font-mono font-bold px-2.5 py-1 rounded">
+                    4/4 GATES PASSED
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
+                  <div className="bg-[#181C21] p-4 rounded-lg border border-white/10 space-y-2">
+                    <div className="flex items-center justify-between text-white font-bold">
+                      <span>Gate 1: DDL Schema Alteration Check</span>
+                      <span className="text-[#A3E635]">✓ PASSED</span>
+                    </div>
+                    <p className="text-zinc-400">
+                      Checked PostgreSQL migration ledger. No DROP TABLE or non-reversible column type alterations found in PR #104.
+                    </p>
+                  </div>
+
+                  <div className="bg-[#181C21] p-4 rounded-lg border border-white/10 space-y-2">
+                    <div className="flex items-center justify-between text-white font-bold">
+                      <span>Gate 2: Kafka Consumer Lag Impact</span>
+                      <span className="text-[#A3E635]">✓ PASSED</span>
+                    </div>
+                    <p className="text-zinc-400">
+                      Kafka offset delta is &lt; 250 messages. Reverting code will not induce consumer deadlocks or offset resets.
+                    </p>
+                  </div>
+
+                  <div className="bg-[#181C21] p-4 rounded-lg border border-white/10 space-y-2">
+                    <div className="flex items-center justify-between text-white font-bold">
+                      <span>Gate 3: Canaries & Health Probes</span>
+                      <span className="text-[#A3E635]">✓ PASSED</span>
+                    </div>
+                    <p className="text-zinc-400">
+                      Kubernetes liveness and readiness probes defined for PR #105 hotfix containers are healthy and verified.
+                    </p>
+                  </div>
+
+                  <div className="bg-[#181C21] p-4 rounded-lg border border-white/10 space-y-2">
+                    <div className="flex items-center justify-between text-white font-bold">
+                      <span>Gate 4: RBAC & Audit Validation</span>
+                      <span className="text-[#A3E635]">✓ PASSED</span>
+                    </div>
+                    <p className="text-zinc-400">
+                      Authenticated Approver persona active. Cryptographic audit event generated and signed for compliance.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 7: UNIVERSAL APPLICATION ONBOARDING & INTEGRATION SUITE */}
+            {activeView === 'integrations' && (
+              <div className="acid-box p-6 space-y-6">
+                
+                {/* Header */}
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-[#A3E635] text-black font-mono font-bold text-xs px-2.5 py-0.5 rounded">
+                        INTEGRATION HUB // ONBOARDING
+                      </span>
+                      <h2 className="text-xl font-bold text-white tracking-tight">
+                        Connect Any Application, Service or Cluster
+                      </h2>
+                    </div>
+                    <p className="text-xs font-mono text-zinc-400 mt-1">
+                      Kisi bhi company ke application ya microservice ko SRE-Zero se 60 seconds mein jodein!
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-[#A3E635] bg-[#A3E635]/10 border border-[#A3E635]/30 px-3 py-1 rounded">
+                      ● INGESTION ENDPOINT: READY
+                    </span>
+                  </div>
+                </div>
+
+                {/* API Key & Ingestion URL Card */}
+                <div className="bg-[#16191D] p-5 rounded-xl border border-white/15 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">
+                        YOUR SECURE INGESTION API KEY
+                      </span>
+                      <code className="text-[#A3E635] font-mono font-bold text-sm bg-black/60 px-2.5 py-1 rounded border border-white/10 inline-block mt-1">
+                        sre_live_sec_7f9a882e3b1c90
+                      </code>
+                    </div>
+
+                    <button
+                      onClick={handleCopyApiKey}
+                      className="acid-btn-primary px-3.5 py-1.5 text-xs font-mono flex items-center gap-1.5"
+                    >
+                      <Icons.Check />
+                      <span>{apiKeyCopied ? 'COPIED TO CLIPBOARD!' : 'COPY API KEY'}</span>
+                    </button>
+                  </div>
+
+                  <div className="text-xs font-mono text-zinc-400 pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      Universal Webhook Endpoint: <code className="text-white bg-black/40 px-2 py-0.5 rounded">POST /api/v1/telemetry/ingest</code>
+                    </span>
+                    <span className="text-zinc-500">Supports JSON payload with Bearer Token Auth</span>
+                  </div>
+                </div>
+
+                {/* Multi-Stack SDK Integration Snippets */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold font-mono text-white">// SELECT YOUR TECH STACK:</span>
+                    </div>
+
+                    {/* Stack Tabs */}
+                    <div className="flex items-center gap-1">
+                      {[
+                        { id: 'python', label: 'Python (FastAPI / Django)' },
+                        { id: 'node', label: 'Node.js (Express / Next.js)' },
+                        { id: 'k8s', label: 'Kubernetes (Helm / Pods)' },
+                        { id: 'webhook', label: 'AlertManager / Datadog' }
+                      ].map(st => (
+                        <button
+                          key={st.id}
+                          onClick={() => setSelectedSdkTab(st.id)}
+                          className={`px-3 py-1 rounded text-xs font-mono transition border ${
+                            selectedSdkTab === st.id
+                              ? 'bg-[#A3E635] text-black font-bold border-[#A3E635]'
+                              : 'bg-[#181C21] text-zinc-400 border-white/10 hover:text-white'
+                          }`}
+                        >
+                          {st.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Code Snippet Box */}
+                  <div className="bg-[#0E1013] border border-white/15 rounded-xl p-4 font-mono text-xs overflow-x-auto relative">
+                    
+                    {selectedSdkTab === 'python' && (
+                      <pre className="text-zinc-200 leading-relaxed">
+{`# Step 1: Install SRE-Zero Python Agent
+pip install sre-zero-sdk
+
+# Step 2: Add 3 lines to your FastAPI or Flask app (main.py)
+from fastapi import FastAPI
+from sre_zero import SREZeroMiddleware
+
+app = FastAPI()
+
+# Auto-captures unhandled 500 exceptions, stacktraces, and streams AST to SRE-Zero:
+app.add_middleware(
+    SREZeroMiddleware,
+    api_key="sre_live_sec_7f9a882e3b1c90",
+    service_name="payment-service",
+    cluster="asia-south1-gke-01",
+    auto_triage=True
+)`}
+                      </pre>
+                    )}
+
+                    {selectedSdkTab === 'node' && (
+                      <pre className="text-zinc-200 leading-relaxed">
+{`// Step 1: Install SRE-Zero Node Agent
+npm install @sre-zero/sdk
+
+// Step 2: Add middleware to server.js / app.js
+const express = require('express');
+const { SREZero } = require('@sre-zero/sdk');
+
+const app = express();
+const sre = new SREZero({ apiKey: 'sre_live_sec_7f9a882e3b1c90' });
+
+// Place as first error handler to intercept crashes & correlate git blame:
+app.use(sre.errorHandler({ service: 'auth-service' }));`}
+                      </pre>
+                    )}
+
+                    {selectedSdkTab === 'k8s' && (
+                      <pre className="text-zinc-200 leading-relaxed">
+{`# 1-Command Cluster-Wide DaemonSet (GKE, EKS, AKS)
+# Streams container crash logs & Kubernetes events directly to SRE-Zero:
+
+helm repo add sre-zero https://charts.sre-zero.dev
+helm repo update
+
+helm install sre-agent sre-zero/agent \
+  --namespace sre-system --create-namespace \
+  --set apiKey="sre_live_sec_7f9a882e3b1c90" \
+  --set cluster="asia-south1-gke-01" \
+  --set autoHeal=true`}
+                      </pre>
+                    )}
+
+                    {selectedSdkTab === 'webhook' && (
+                      <pre className="text-zinc-200 leading-relaxed">
+{`# alertmanager.yml configuration:
+# Route Prometheus or Datadog alerts directly to SRE-Zero autonomous triage:
+
+receivers:
+  - name: 'sre-zero-receiver'
+    webhook_configs:
+      - url: 'https://sre-zero.live/api/v1/telemetry/ingest'
+        send_resolved: true
+        http_config:
+          bearer_token: 'sre_live_sec_7f9a882e3b1c90'`}
+                      </pre>
+                    )}
+
+                  </div>
+                </div>
+
+                {/* Interactive Live Testing Sandbox */}
+                <div className="bg-[#14171A] p-5 rounded-xl border border-white/15 space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+                    <div>
+                      <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                        <Icons.Zap />
+                        <span>Live Verification Simulator: Send Test Packet From External App</span>
+                      </h3>
+                      <p className="text-xs font-mono text-zinc-400 mt-0.5">
+                        Test karein ki jab koi company apna app connect karti hai, toh real-time ingestion kaise kaam karta hai.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handleSendTestTelemetry}
+                      disabled={testIngestStatus === 'SENDING'}
+                      className="acid-btn-primary px-4 py-2 text-xs font-mono"
+                    >
+                      {testIngestStatus === 'SENDING' ? 'Ingesting...' : '⚡ Send Test Telemetry Packet'}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+                    <div>
+                      <label className="text-zinc-400 block mb-1">Simulated Client Microservice:</label>
+                      <input 
+                        type="text" 
+                        value={testServiceName}
+                        onChange={(e) => setTestServiceName(e.target.value)}
+                        className="w-full bg-[#1C2127] border border-white/15 rounded px-3 py-1.5 text-white focus:outline-none focus:border-[#A3E635]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 block mb-1">Simulated Crash Exception:</label>
+                      <input 
+                        type="text" 
+                        value={testErrorType}
+                        onChange={(e) => setTestErrorType(e.target.value)}
+                        className="w-full bg-[#1C2127] border border-white/15 rounded px-3 py-1.5 text-white focus:outline-none focus:border-[#A3E635]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Real-time Response Output */}
+                  {testIngestResult && (
+                    <div className="bg-[#121A14] border border-[#A3E635] p-3 rounded-lg text-xs font-mono text-zinc-200 space-y-1">
+                      <div className="flex items-center gap-2 text-[#A3E635] font-bold">
+                        <Icons.Check />
+                        <span>HTTP 200 INGESTION SUCCESS: Telemetry Stream Connected!</span>
+                      </div>
+                      <div className="text-zinc-400 text-[11px]">
+                        Message: {testIngestResult.message} • Fingerprint: <code className="text-[#A3E635]">{testIngestResult.fingerprint}</code>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
+            {/* VIEW 8: AUDIT LEDGER */}
+            {activeView === 'settings' && (
+              <div className="acid-box p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Immutable SOC2 Compliance Audit Ledger</h2>
+                    <p className="text-xs font-mono text-zinc-400">Cryptographically verifiable sequence of all incident triage actions</p>
+                  </div>
+                  <span className="text-xs font-mono text-zinc-400">Tamper-Proof Ledger</span>
+                </div>
+
+                <div className="space-y-2.5 font-mono text-xs">
+                  {auditLedger.map((item) => (
+                    <div key={item.id} className="bg-[#16191D] p-3 rounded-lg border border-white/10 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#A3E635] font-bold">[{item.time}]</span>
+                          <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] text-white">{item.role}</span>
+                          <span className="text-white font-bold">{item.actor}</span>
+                        </div>
+                        <p className="text-zinc-400 text-[11px] mt-1">{item.reason}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                          {item.action}
+                        </span>
+                        <div className="text-[10px] text-zinc-500 mt-0.5 font-mono">{item.ref}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ─── ENTERPRISE DATA-SHARING PREVIEW & EXPLICIT APPROVAL GATE MODAL ─── */}
+            {showApprovalModal && previewData && (
+              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="acid-box bg-[#131518] border border-[#A3E635] max-w-2xl w-full p-6 space-y-4 shadow-[0_0_40px_rgba(163,230,53,0.25)] animate-in fade-in zoom-in-95">
+                  
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#A3E635] animate-pulse"></span>
+                      <h3 className="text-base font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                        <span>🛡️</span>
+                        <span>Enterprise AI Data-Sharing Approval Gate</span>
+                      </h3>
+                    </div>
+                    <span className="text-[11px] font-mono text-[#A3E635] bg-[#A3E635]/10 px-2.5 py-0.5 rounded border border-[#A3E635]/30 font-bold">
+                      Hybrid Security Protocol
+                    </span>
+                  </div>
+
+                  <p className="text-xs font-mono text-zinc-300 leading-relaxed">
+                    Under SRE-Zero&apos;s Hybrid Security Architecture, client source code and raw production logs are protected. Sensitive credentials, tokens and database URIs have been detected and stripped on the backend before staging.
+                  </p>
+
+                  {/* Redaction Metrics Bar */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-mono">
+                    <div className="bg-[#181C21] p-2.5 rounded-lg border border-white/10">
+                      <div className="text-zinc-400 text-[10px] uppercase font-bold">Secrets Redacted</div>
+                      <div className="text-[#A3E635] font-bold text-sm mt-0.5">
+                        {previewData.redactedCount} Tokens Stripped
+                      </div>
+                    </div>
+                    <div className="bg-[#181C21] p-2.5 rounded-lg border border-white/10">
+                      <div className="text-zinc-400 text-[10px] uppercase font-bold">Security Boundary</div>
+                      <div className="text-[#38BDF8] font-bold text-sm mt-0.5">Customer Perimeter</div>
+                    </div>
+                    <div className="bg-[#181C21] p-2.5 rounded-lg border border-white/10 col-span-2 sm:col-span-1">
+                      <div className="text-zinc-400 text-[10px] uppercase font-bold">Raw Repo Code Sent</div>
+                      <div className="text-[#A3E635] font-bold text-sm mt-0.5">0% (AST Diff Only)</div>
+                    </div>
+                  </div>
+
+                  {/* Proposed Data Categories */}
+                  <div className="bg-[#181C21] p-3 rounded-lg border border-white/10 space-y-1.5 font-mono text-xs">
+                    <div className="text-zinc-400 font-bold text-[10px] uppercase">
+                      Categories Proposed for AI Synthesis (No PII / No Passwords):
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {previewData.proposedDataCategories?.map((cat, i) => (
+                        <span key={i} className="bg-white/5 border border-white/10 text-zinc-300 px-2 py-0.5 rounded text-[11px]">
+                          ✓ {cat}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sanitized Evidence Preview Box */}
+                  <div className="space-y-1 font-mono">
+                    <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                      <span>BACKEND-SANITIZED PAYLOAD PREVIEW (WHAT GEMINI SEES):</span>
+                      <span className="text-[#A3E635] font-bold">✓ AES Boundary Active</span>
+                    </div>
+                    <div className="bg-black/90 p-3 rounded-lg border border-white/15 text-[11px] text-zinc-300 max-h-36 overflow-y-auto space-y-1.5">
+                      <div className="text-zinc-500">// STACKTRACE EXCERPT (SANITIZED ON BACKEND):</div>
+                      <pre className="text-[#A3E635] whitespace-pre-wrap">{previewData.sanitizedPreview?.logs}</pre>
+                      <div className="text-zinc-500 pt-1">// GIT DELTA EXCERPT (SANITIZED ON BACKEND):</div>
+                      <pre className="text-zinc-300 whitespace-pre-wrap">{previewData.sanitizedPreview?.gitDiff}</pre>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3 font-mono text-xs font-bold">
+                    <button
+                      onClick={handleRejectDataSharing}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-[#FB7185]/40 text-[#FB7185] hover:bg-[#FB7185]/10 transition"
+                    >
+                      🔒 Reject (Use Local Heuristics Only)
+                    </button>
+                    <button
+                      onClick={handleApproveDataSharing}
+                      disabled={isApproving}
+                      className="w-full sm:w-auto acid-btn-primary px-5 py-2.5 rounded-lg flex items-center justify-center gap-2"
+                    >
+                      <span>{isApproving ? 'Verifying...' : '✅ Approve & Transmit Sanitized Data'}</span>
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+          </main>
+
+          {/* ─── TECHNICAL FOOTER ─── */}
+          <footer className="bg-[#111317] border-t border-white/10 px-6 py-3 flex flex-wrap items-center justify-between text-xs font-mono text-zinc-500">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#A3E635]"></span>
+              <span>SRE-ZERO // ACID MINIMALIST DEV-OPS PROTOCOL V1.0</span>
+            </div>
+            <div>
+              ENGINEERED FOR BUILDATHON INDIA 2026 • GEMINI 4 HYDROGEN AI STUDIO
+            </div>
+          </footer>
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
